@@ -361,8 +361,88 @@ ${bookText}`;
   throw new Error('فشلت جميع المحاولات:\n' + errors.join('\n'));
 }
 
+// ============== أدوات رسم الزخارف ==============
+function drawDiamond(ctx, x, y, size, color) {
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(x, y - size);
+  ctx.lineTo(x + size, y);
+  ctx.lineTo(x, y + size);
+  ctx.lineTo(x - size, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawOrnamentDivider(ctx, cx, y, width, color) {
+  const half = width / 2;
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  // خط يسار
+  ctx.beginPath();
+  ctx.moveTo(cx - half, y);
+  ctx.lineTo(cx - 20, y);
+  ctx.stroke();
+  // خط يمين
+  ctx.beginPath();
+  ctx.moveTo(cx + 20, y);
+  ctx.lineTo(cx + half, y);
+  ctx.stroke();
+  // معين في الوسط
+  drawDiamond(ctx, cx, y, 8, color);
+  // نقاط صغيرة على الجانبين
+  drawDiamond(ctx, cx - half + 8, y, 3, color);
+  drawDiamond(ctx, cx + half - 8, y, 3, color);
+  ctx.restore();
+}
+
+function drawCornerOrnaments(ctx, W, H) {
+  const color = 'rgba(60, 50, 35, 0.22)';
+  const size = 30;
+  const pad = 60;
+
+  // 4 زوايا صغيرة
+  const corners = [
+    { x: pad, y: pad, sx: 1, sy: 1 },          // top-left
+    { x: W - pad, y: pad, sx: -1, sy: 1 },     // top-right
+    { x: pad, y: H - pad, sx: 1, sy: -1 },     // bottom-left
+    { x: W - pad, y: H - pad, sx: -1, sy: -1 },// bottom-right
+  ];
+
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2.5;
+  for (const c of corners) {
+    // خط أفقي
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.x + size * c.sx, c.y);
+    ctx.stroke();
+    // خط عمودي
+    ctx.beginPath();
+    ctx.moveTo(c.x, c.y);
+    ctx.lineTo(c.x, c.y + size * c.sy);
+    ctx.stroke();
+    // نقطة صغيرة عند التقاء
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(c.x + 6 * c.sx, c.y + 6 * c.sy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 // ============== توليد الصورة (المحسّن) ==============
-async function generateQuoteImage(text, bookName, authorName) {
+async function generateQuoteImage(rawText, bookName, authorName) {
+  // 1) إزالة رقم الصفحة من نص الصورة
+  let text = rawText.replace(/\s*\[صفحة\s*\d+\]\s*/g, ' ');
+  // إزالة الأقواس المربعة الفارغة إن بقيت
+  text = text.replace(/\[\s*\]/g, '');
+  // تنظيف مسافات زائدة
+  text = text.replace(/\s+/g, ' ').trim();
+
   const W = 1080, H = 1350;
   const canvas = document.createElement('canvas');
   canvas.width = W;
@@ -373,83 +453,101 @@ async function generateQuoteImage(text, bookName, authorName) {
   ctx.fillStyle = '#fdfaf2';
   ctx.fillRect(0, 0, W, H);
 
-  // ===== 2) البروز الداخلي (Inner Shadow) =====
+  // ===== 2) البروز الداخلي =====
   const edge = 130;
   const shadowColor = '60, 50, 35';
-  // أعلى
   let g = ctx.createLinearGradient(0, 0, 0, edge);
   g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
   g.addColorStop(1, `rgba(${shadowColor}, 0)`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, W, edge);
-  // أسفل
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, edge);
+
   g = ctx.createLinearGradient(0, H, 0, H - edge);
   g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
   g.addColorStop(1, `rgba(${shadowColor}, 0)`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, H - edge, W, edge);
-  // يمين
+  ctx.fillStyle = g; ctx.fillRect(0, H - edge, W, edge);
+
   g = ctx.createLinearGradient(W, 0, W - edge, 0);
   g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
   g.addColorStop(1, `rgba(${shadowColor}, 0)`);
-  ctx.fillStyle = g;
-  ctx.fillRect(W - edge, 0, edge, H);
-  // يسار
+  ctx.fillStyle = g; ctx.fillRect(W - edge, 0, edge, H);
+
   g = ctx.createLinearGradient(0, 0, edge, 0);
   g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
   g.addColorStop(1, `rgba(${shadowColor}, 0)`);
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, edge, H);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, edge, H);
 
-  // ===== 3) إطار خارجي رقيق =====
+  // ===== 3) الإطار الخارجي =====
   ctx.strokeStyle = 'rgba(60, 50, 35, 0.18)';
   ctx.lineWidth = 3;
   ctx.strokeRect(28, 28, W - 56, H - 56);
 
-  // ===== 4) علامة الاقتباس (أعلى يسار) =====
+  // ===== 4) زوايا زخرفية =====
+  drawCornerOrnaments(ctx, W, H);
+
+  // ===== 5) علامة الاقتباس (أعلى يسار) =====
   ctx.direction = 'ltr';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.fillStyle = '#2b6cb0';
-  ctx.font = 'bold 220px -apple-system, "SF Arabic", system-ui, sans-serif';
-  ctx.fillText('\u201C', 60, 10);
+  ctx.font = 'bold 200px -apple-system, "SF Arabic", system-ui, sans-serif';
+  ctx.fillText('\u201C', 60, 20);
 
-  // ===== 5) نص الاقتباس (بخط أكبر) =====
+  // ===== 6) فاصل زخرفي تحت علامة الاقتباس =====
+  drawOrnamentDivider(ctx, W / 2, 260, 260, 'rgba(43, 108, 176, 0.55)');
+
+  // ===== 7) حساب حجم الخط المتكيّف =====
+  let fontSize = 64;
+  if (text.length > 180) fontSize = 58;
+  if (text.length > 280) fontSize = 52;
+  if (text.length > 380) fontSize = 46;
+  if (text.length > 480) fontSize = 42;
+
+  const lineHeight = Math.round(fontSize * 1.7);
   ctx.direction = 'rtl';
   ctx.textAlign = 'right';
   ctx.textBaseline = 'top';
   ctx.fillStyle = '#1a1a1a';
-  ctx.font = '52px -apple-system, "SF Arabic", system-ui, sans-serif';
+  ctx.font = `${fontSize}px -apple-system, "SF Arabic", system-ui, sans-serif`;
 
-  const maxWidth = W - 180;
-  const lineHeight = 88;
+  const maxWidth = W - 200;
   const lines = wrapTextArabic(ctx, text, maxWidth);
 
-  let y = 320;
-  const maxY = H - 320;
+  // ===== 8) التوسيط العمودي =====
+  // نطاق النص: من y=320 إلى y=H-360
+  const textTop = 330;
+  const textBottom = H - 360;
+  const totalTextHeight = lines.length * lineHeight;
+  const availableHeight = textBottom - textTop;
+  const startY = textTop + Math.max(0, (availableHeight - totalTextHeight) / 2);
+
+  let y = startY;
   for (const line of lines) {
-    if (y + lineHeight > maxY) break;
-    ctx.fillText(line, W - 90, y);
+    if (y + lineHeight > textBottom + lineHeight) break;
+    ctx.fillText(line, W - 100, y);
     y += lineHeight;
   }
 
-  // ===== 6) الكاتب والكتاب (أسفل يسار) =====
+  // ===== 9) فاصل زخرفي أسفل الاقتباس =====
+  const bottomDividerY = Math.max(y + 40, H - 320);
+  drawOrnamentDivider(ctx, W / 2, bottomDividerY, 200, 'rgba(60, 50, 35, 0.28)');
+
+  // ===== 10) الكتاب والمؤلف (أسفل يسار) =====
   ctx.textAlign = 'left';
   ctx.direction = 'rtl';
 
   if (bookName) {
     ctx.fillStyle = '#4a5568';
     ctx.font = 'bold 28px -apple-system, "SF Arabic", system-ui, sans-serif';
-    ctx.fillText('📖 ' + bookName, 90, H - 210);
+    ctx.fillText('📖 ' + bookName, 90, H - 200);
   }
 
   if (authorName) {
     ctx.fillStyle = '#718096';
     ctx.font = '24px -apple-system, "SF Arabic", system-ui, sans-serif';
-    ctx.fillText('✍ ' + authorName, 90, H - 165);
+    ctx.fillText('✍ ' + authorName, 90, H - 155);
   }
 
-  // ===== 7) العلامة المائية (باهتة، متعددة المواضع) =====
+  // ===== 11) العلامة المائية =====
   ctx.save();
   ctx.globalAlpha = 0.07;
   ctx.fillStyle = '#000';
@@ -474,7 +572,6 @@ async function generateQuoteImage(text, bookName, authorName) {
   }
   ctx.restore();
 
-  // ===== 8) الإخراج PNG =====
   return new Promise(resolve => {
     canvas.toBlob(blob => resolve(blob), 'image/png');
   });
@@ -675,7 +772,8 @@ function renderLibrary(filter) {
       <div class="card-actions">
         <button class="btn btn-green" data-act="copy">📋 نسخ</button>
         <button class="btn btn-blue" data-act="share">📤 مشاركة</button>
-        <button class="btn btn-red" data-act="del">🗑 حذف</button>
+        <button class="btn btn-purple" data-act="image">📸 صورة</button>
+        <button class="btn btn-red" data-act="del">🗑</button>
       </div>
     `;
     card.querySelector('.star').addEventListener('click', () => {
@@ -685,6 +783,7 @@ function renderLibrary(filter) {
     });
     card.querySelector('[data-act="copy"]').addEventListener('click', () => copyQuote(q.text));
     card.querySelector('[data-act="share"]').addEventListener('click', () => shareQuote(q.text));
+    card.querySelector('[data-act="image"]').addEventListener('click', () => showQuoteImage(q.text));
     card.querySelector('[data-act="del"]').addEventListener('click', () => {
       if (confirm('حذف هذا الاقتباس؟')) {
         state.library = state.library.filter(x => x.id !== q.id);
