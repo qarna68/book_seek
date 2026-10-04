@@ -331,18 +331,6 @@ function drawDiamond(ctx, cx, cy, size, color) {
   ctx.closePath(); ctx.fill(); ctx.restore();
 }
 
-// رسم خط منقوش بأسلوب زخرفي بين نقطتين
-function drawOrnamentalLine(ctx, x1, y1, x2, y2, color) {
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
-  ctx.stroke();
-  ctx.restore();
-}
-
-// زخرفة زاوية على شكل حلزوني (مستوحى من صورة الأرابيسك)
 function drawFlourishCorner(ctx, cx, cy, dirX, dirY, size, color) {
   ctx.save();
   ctx.strokeStyle = color;
@@ -350,77 +338,32 @@ function drawFlourishCorner(ctx, cx, cy, dirX, dirY, size, color) {
   ctx.lineWidth = 2;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-
   const L = size;
-
-  // 1) الخط الأفقي الرئيسي
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + L * dirX, cy);
-  ctx.stroke();
-
-  // 2) الخط العمودي الرئيسي
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx, cy + L * dirY);
-  ctx.stroke();
-
-  // 3) نقاط صغيرة في نهاية كل خط
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + L * dirX, cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + L * dirY); ctx.stroke();
   ctx.beginPath(); ctx.arc(cx + L * dirX, cy, 3, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx, cy + L * dirY, 3, 0, Math.PI * 2); ctx.fill();
-
-  // 4) حلزون صغير عند بداية الخط الأفقي
   ctx.beginPath();
   ctx.moveTo(cx + 40 * dirX, cy);
-  ctx.bezierCurveTo(
-    cx + 70 * dirX, cy + 25 * dirY,
-    cx + 100 * dirX, cy + 10 * dirY,
-    cx + 85 * dirX, cy + 35 * dirY
-  );
+  ctx.bezierCurveTo(cx + 70 * dirX, cy + 25 * dirY, cx + 100 * dirX, cy + 10 * dirY, cx + 85 * dirX, cy + 35 * dirY);
   ctx.stroke();
-
-  // 5) ورقة صغيرة
   ctx.beginPath();
   ctx.moveTo(cx + 55 * dirX, cy + 5 * dirY);
-  ctx.quadraticCurveTo(
-    cx + 75 * dirX, cy - 15 * dirY,
-    cx + 90 * dirX, cy + 5 * dirY
-  );
-  ctx.quadraticCurveTo(
-    cx + 75 * dirX, cy + 15 * dirY,
-    cx + 55 * dirX, cy + 5 * dirY
-  );
-  ctx.closePath();
-  ctx.fill();
-
-  // 6) حلزون صغير عند بداية الخط العمودي
+  ctx.quadraticCurveTo(cx + 75 * dirX, cy - 15 * dirY, cx + 90 * dirX, cy + 5 * dirY);
+  ctx.quadraticCurveTo(cx + 75 * dirX, cy + 15 * dirY, cx + 55 * dirX, cy + 5 * dirY);
+  ctx.closePath(); ctx.fill();
   ctx.beginPath();
   ctx.moveTo(cx, cy + 40 * dirY);
-  ctx.bezierCurveTo(
-    cx + 25 * dirX, cy + 70 * dirY,
-    cx + 10 * dirX, cy + 100 * dirY,
-    cx + 35 * dirX, cy + 85 * dirY
-  );
+  ctx.bezierCurveTo(cx + 25 * dirX, cy + 70 * dirY, cx + 10 * dirX, cy + 100 * dirY, cx + 35 * dirX, cy + 85 * dirY);
   ctx.stroke();
-
-  // 7) ورقة صغيرة عمودية
   ctx.beginPath();
   ctx.moveTo(cx + 5 * dirX, cy + 55 * dirY);
-  ctx.quadraticCurveTo(
-    cx - 15 * dirX, cy + 75 * dirY,
-    cx + 5 * dirX, cy + 90 * dirY
-  );
-  ctx.quadraticCurveTo(
-    cx + 15 * dirX, cy + 75 * dirY,
-    cx + 5 * dirX, cy + 55 * dirY
-  );
-  ctx.closePath();
-  ctx.fill();
-
+  ctx.quadraticCurveTo(cx - 15 * dirX, cy + 75 * dirY, cx + 5 * dirX, cy + 90 * dirY);
+  ctx.quadraticCurveTo(cx + 15 * dirX, cy + 75 * dirY, cx + 5 * dirX, cy + 55 * dirY);
+  ctx.closePath(); ctx.fill();
   ctx.restore();
 }
 
-// فاصل زخرفي على شكل خط + معين
 function drawOrnamentLine(ctx, cx, y, width, color, withDiamond) {
   const half = width / 2;
   ctx.save();
@@ -433,91 +376,109 @@ function drawOrnamentLine(ctx, cx, y, width, color, withDiamond) {
   ctx.restore();
 }
 
-// نص ثلاثي الأبعاد: ظل + إبراز + حافة
 function fillText3D(ctx, text, x, y, color, highlight, shadow) {
   ctx.save();
-  // ظل خفيف أسفل-يمين
   ctx.fillStyle = shadow;
   ctx.fillText(text, x + 2, y + 3);
-  // إبراز خفيف أعلى-يسار
   ctx.fillStyle = highlight;
   ctx.fillText(text, x - 1, y - 1);
-  // النص الأساسي
   ctx.fillStyle = color;
   ctx.fillText(text, x, y);
   ctx.restore();
 }
 
-// ============== النمط 1: نسخي فاخر (جديد) ==============
+function drawWatermark(ctx, W, H, color) {
+  ctx.save();
+  ctx.globalAlpha = 0.12;
+  ctx.fillStyle = color;
+  ctx.font = 'bold 32px Amiri, system-ui, sans-serif';
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const positions = [
+    { x: W * 0.25, y: H * 0.20, rot: -22 },
+    { x: W * 0.75, y: H * 0.38, rot: -22 },
+    { x: W * 0.28, y: H * 0.60, rot: -22 },
+    { x: W * 0.72, y: H * 0.80, rot: -22 },
+  ];
+  for (const p of positions) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot * Math.PI / 180);
+    ctx.fillText('تصميم / sab3-77', 0, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+// ============== النمط 1: نسخي فاخر (كحلي + ذهبي) ==============
 function drawNaskh(ctx, W, H, text, bookName, authorName) {
-  // خلفية كريمية بملمس ورقي ناعم
+  // خلفية كحلية داكنة بتدرج
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#f5ecd6');
-  bg.addColorStop(0.5, '#efe3c8');
-  bg.addColorStop(1, '#e8d9b6');
+  bg.addColorStop(0, '#0a1a30');
+  bg.addColorStop(0.5, '#0f2542');
+  bg.addColorStop(1, '#071224');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  // حبيبات ناعمة (ملمس ورقي)
+  // توهج مركزي أزرق خفيف
+  const vg = ctx.createRadialGradient(W/2, H/2, W*0.15, W/2, H/2, W*0.9);
+  vg.addColorStop(0, 'rgba(70, 110, 170, 0.22)');
+  vg.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+  // حبيبات ذهبية دقيقة (تأثير نجوم)
   ctx.save();
-  ctx.globalAlpha = 0.035;
-  for (let i = 0; i < 4000; i++) {
+  ctx.globalAlpha = 0.18;
+  for (let i = 0; i < 400; i++) {
     const x = Math.random() * W;
     const y = Math.random() * H;
-    ctx.fillStyle = Math.random() > 0.5 ? '#8a6a30' : '#3a2a10';
+    ctx.fillStyle = Math.random() > 0.5 ? '#c9a961' : '#e8d5a8';
     ctx.fillRect(x, y, 1, 1);
   }
   ctx.restore();
 
-  // Vignette خفيف
-  const vg = ctx.createRadialGradient(W/2, H/2, W*0.3, W/2, H/2, W*0.85);
-  vg.addColorStop(0, 'rgba(255,250,235,0.35)');
-  vg.addColorStop(1, 'rgba(90,60,20,0.22)');
-  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  const gold = '#c9a961';
+  const goldDark = '#8a6d2f';
+  const goldLight = '#e8d5a8';
+  const goldBright = '#f5e6b8';
+  const textColor = '#e8d5a8';
+  const textHighlight = 'rgba(255, 245, 200, 0.85)';
+  const textShadow = 'rgba(0, 0, 0, 0.85)';
 
-  const greenDark = '#0d4a3d';
-  const gold = '#b8945a';
-  const goldLight = '#d4b478';
-  const textColor = '#1f1a12';
-  const textHighlight = 'rgba(255,245,215,0.85)';
-  const textShadow = 'rgba(0,0,0,0.32)';
-
-  // إطار خارجي سميك بلون أخضر داكن
-  ctx.strokeStyle = greenDark;
+  // إطار خارجي ذهبي
+  ctx.strokeStyle = gold;
   ctx.lineWidth = 5;
   ctx.strokeRect(38, 38, W - 76, H - 76);
 
   // إطار ذهبي داخلي
-  ctx.strokeStyle = gold;
+  ctx.strokeStyle = goldDark;
   ctx.lineWidth = 1.5;
   ctx.strokeRect(58, 58, W - 116, H - 116);
 
   // خط رقيق إضافي
-  ctx.strokeStyle = 'rgba(184,148,90,0.4)';
+  ctx.strokeStyle = 'rgba(201,169,97,0.5)';
   ctx.lineWidth = 1;
   ctx.strokeRect(66, 66, W - 132, H - 132);
 
-  // زخارف 4 زوايا
+  // زخارف الزوايا ذهبية
   const cs = 130;
-  drawFlourishCorner(ctx, 66, 66, 1, 1, cs, greenDark);
-  drawFlourishCorner(ctx, W - 66, 66, -1, 1, cs, greenDark);
-  drawFlourishCorner(ctx, 66, H - 66, 1, -1, cs, greenDark);
-  drawFlourishCorner(ctx, W - 66, H - 66, -1, -1, cs, greenDark);
+  drawFlourishCorner(ctx, 66, 66, 1, 1, cs, gold);
+  drawFlourishCorner(ctx, W - 66, 66, -1, 1, cs, gold);
+  drawFlourishCorner(ctx, 66, H - 66, 1, -1, cs, gold);
+  drawFlourishCorner(ctx, W - 66, H - 66, -1, -1, cs, gold);
 
-  // علامة الاقتباس مذهّبة
+  // علامة الاقتباس ذهبية
   ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillStyle = goldLight;
-  ctx.strokeStyle = greenDark;
-  ctx.lineWidth = 2;
+  ctx.fillStyle = goldBright;
   ctx.font = 'bold 200px "Aref Ruqaa", Georgia, serif';
   ctx.fillText('\u201C', 90, 15);
-  ctx.strokeText('\u201C', 90, 15);
 
   // فاصل أعلى
   drawOrnamentLine(ctx, W/2, 245, 300, gold, true);
 
   // النص بخط Amiri النسخي
   const len = text.length;
-  const fontSize = adaptiveFontSize(len, 72, 44);
+  const fontSize = adaptiveFontSize(len, 74, 46);
   const lineHeight = Math.round(fontSize * 1.75);
   ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
   ctx.font = `700 ${fontSize}px Amiri, "Scheherazade New", Georgia, serif`;
@@ -529,7 +490,7 @@ function drawNaskh(ctx, W, H, text, bookName, authorName) {
   const totalH = lines.length * lineHeight;
   let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
 
-  // نص ثلاثي الأبعاد
+  // نص ثلاثي الأبعاد ذهبي
   for (const line of lines) {
     if (y + lineHeight > bottomY + lineHeight) break;
     fillText3D(ctx, line, W - 100, y, textColor, textHighlight, textShadow);
@@ -540,37 +501,30 @@ function drawNaskh(ctx, W, H, text, bookName, authorName) {
   const dividerY = Math.min(y + 50, H - 305);
   drawOrnamentLine(ctx, W/2, dividerY, 240, gold, true);
 
-  // الكتاب والمؤلف
-  ctx.textAlign = 'center'; ctx.direction = 'rtl';
-  ctx.textBaseline = 'top';
+  // الكتاب والمؤلف - الأقواس تنظر للداخل مع إيموجي الكتاب
+  ctx.textAlign = 'center'; ctx.direction = 'rtl'; ctx.textBaseline = 'top';
   if (bookName) {
-    ctx.font = 'bold 32px Amiri, "Scheherazade New", Georgia, serif';
-    ctx.fillStyle = greenDark;
-    // 3D خفيف
+    ctx.font = 'bold 34px Amiri, "Scheherazade New", Georgia, serif';
+    const bookText = '📖 ﴿ ' + bookName + ' ﴾';
+    // 3D ذهبي
     ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillText('﴾ ' + bookName + ' ﴿', W/2 + 1, H - 235 + 2);
-    ctx.fillStyle = greenDark;
-    ctx.fillText('﴾ ' + bookName + ' ﴿', W/2, H - 235);
+    ctx.fillStyle = 'rgba(0,0,0,0.6)';
+    ctx.fillText(bookText, W/2 + 2, H - 235 + 3);
+    ctx.fillStyle = goldBright;
+    ctx.fillText(bookText, W/2, H - 235);
     ctx.restore();
   }
   if (authorName) {
     ctx.font = 'italic 26px Amiri, "Scheherazade New", Georgia, serif';
     ctx.fillStyle = gold;
-    ctx.fillText('✍ ' + authorName, W/2, H - 185);
+    ctx.fillText('✍ ' + authorName, W/2, H - 180);
   }
 
-  // توقيع في زاوية واحدة
-  ctx.save();
-  ctx.globalAlpha = 0.4;
-  ctx.fillStyle = greenDark;
-  ctx.font = '18px Amiri, Georgia, serif';
-  ctx.textAlign = 'right'; ctx.direction = 'ltr';
-  ctx.fillText('sab3-77', W - 85, H - 85);
-  ctx.restore();
+  // العلامة المائية متوزعة
+  drawWatermark(ctx, W, H, goldLight);
 }
 
-// ============== النمط 2: شرقي (محسّن بخط أميري) ==============
+// ============== النمط 2: شرقي ==============
 function drawOriental(ctx, W, H, text, bookName, authorName) {
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, '#14213d');
@@ -578,7 +532,6 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
   bg.addColorStop(1, '#0d1b2f');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  // زخرفة إسلامية ذهبية
   ctx.save();
   ctx.globalAlpha = 0.06;
   ctx.strokeStyle = '#c9a961';
@@ -586,7 +539,6 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
   const spacing = 90;
   for (let yy = -spacing; yy < H + spacing; yy += spacing) {
     for (let xx = -spacing; xx < W + spacing; xx += spacing) {
-      // نجمة ثمانية
       ctx.save(); ctx.translate(xx, yy); ctx.strokeRect(-26, -26, 52, 52);
       ctx.rotate(Math.PI/4); ctx.strokeRect(-26, -26, 52, 52); ctx.restore();
       ctx.save(); ctx.translate(xx + spacing/2, yy + spacing/2); ctx.strokeRect(-26, -26, 52, 52);
@@ -595,7 +547,6 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
   }
   ctx.restore();
 
-  // إطار ذهبي
   ctx.strokeStyle = 'rgba(201,169,97,0.9)';
   ctx.lineWidth = 3;
   ctx.strokeRect(50, 50, W - 100, H - 100);
@@ -603,14 +554,12 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
   ctx.lineWidth = 1;
   ctx.strokeRect(70, 70, W - 140, H - 140);
 
-  // زخارف الزوايا بنفس الأسلوب
   const cs = 120;
   drawFlourishCorner(ctx, 70, 70, 1, 1, cs, 'rgba(201,169,97,0.85)');
   drawFlourishCorner(ctx, W - 70, 70, -1, 1, cs, 'rgba(201,169,97,0.85)');
   drawFlourishCorner(ctx, 70, H - 70, 1, -1, cs, 'rgba(201,169,97,0.85)');
   drawFlourishCorner(ctx, W - 70, H - 70, -1, -1, cs, 'rgba(201,169,97,0.85)');
 
-  // علامة الاقتباس
   ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillStyle = 'rgba(201,169,97,0.9)';
   ctx.font = 'bold 220px "Aref Ruqaa", Georgia, serif';
@@ -618,13 +567,11 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
 
   drawOrnamentLine(ctx, W/2, 250, 300, 'rgba(201,169,97,0.75)', true);
 
-  // النص بخط أميري
   const len = text.length;
   const fontSize = adaptiveFontSize(len, 70, 42);
   const lineHeight = Math.round(fontSize * 1.75);
   ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
   ctx.font = `700 ${fontSize}px Amiri, "Scheherazade New", Georgia, serif`;
-
   const maxWidth = W - 220;
   const lines = wrapText(ctx, text, maxWidth);
 
@@ -632,7 +579,6 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
   const totalH = lines.length * lineHeight;
   let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
 
-  // 3D ذهبي على كحلي
   for (const line of lines) {
     if (y + lineHeight > bottomY + lineHeight) break;
     fillText3D(ctx, line, W - 110, y, '#f5ecd9', 'rgba(255,255,255,0.35)', 'rgba(0,0,0,0.55)');
@@ -646,20 +592,15 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
   if (bookName) {
     ctx.fillStyle = '#e8d5a8';
     ctx.font = 'bold 32px Amiri, "Scheherazade New", serif';
-    ctx.fillText('﴾ ' + bookName + ' ﴿', W/2, H - 230);
+    ctx.fillText('📖 ﴿ ' + bookName + ' ﴾', W/2, H - 230);
   }
   if (authorName) {
     ctx.fillStyle = '#c9a961';
     ctx.font = 'italic 26px Amiri, "Scheherazade New", serif';
     ctx.fillText('✍ ' + authorName, W/2, H - 180);
   }
-  ctx.save();
-  ctx.globalAlpha = 0.5;
-  ctx.fillStyle = '#c9a961';
-  ctx.font = '18px Georgia, serif';
-  ctx.textAlign = 'right'; ctx.direction = 'ltr';
-  ctx.fillText('sab3-77', W - 80, H - 80);
-  ctx.restore();
+
+  drawWatermark(ctx, W, H, '#c9a961');
 }
 
 // ============== النمط 3: كلاسيكي ==============
@@ -715,19 +656,33 @@ function drawClassic(ctx, W, H, text, bookName, authorName) {
   if (bookName) {
     ctx.fillStyle = '#5c4a2f';
     ctx.font = 'bold 30px Amiri, Georgia, serif';
-    ctx.fillText('﴾ ' + bookName + ' ﴿', W/2, H - 240);
+    ctx.fillText('📖 ﴿ ' + bookName + ' ﴾', W/2, H - 240);
   }
   if (authorName) {
     ctx.fillStyle = '#8a7a5f';
     ctx.font = 'italic 24px Amiri, Georgia, serif';
     ctx.fillText('✍ ' + authorName, W/2, H - 195);
   }
+
+  // العلامة المائية بني فاتح للخلفية الفاتحة
   ctx.save();
-  ctx.globalAlpha = 0.35;
-  ctx.fillStyle = '#b8945a';
-  ctx.font = '18px Georgia, serif';
-  ctx.textAlign = 'right'; ctx.direction = 'ltr';
-  ctx.fillText('sab3-77', W - 70, H - 70);
+  ctx.globalAlpha = 0.09;
+  ctx.fillStyle = '#5a3a10';
+  ctx.font = 'bold 32px Amiri, system-ui, sans-serif';
+  ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const positions = [
+    { x: W * 0.25, y: H * 0.20, rot: -22 },
+    { x: W * 0.75, y: H * 0.38, rot: -22 },
+    { x: W * 0.28, y: H * 0.60, rot: -22 },
+    { x: W * 0.72, y: H * 0.80, rot: -22 },
+  ];
+  for (const p of positions) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot * Math.PI / 180);
+    ctx.fillText('تصميم / sab3-77', 0, 0);
+    ctx.restore();
+  }
   ctx.restore();
 }
 
@@ -774,19 +729,33 @@ function drawModern(ctx, W, H, text, bookName, authorName) {
   if (bookName) {
     ctx.fillStyle = accent;
     ctx.font = 'bold 28px -apple-system, "SF Arabic", system-ui, sans-serif';
-    ctx.fillText(bookName, 100, lineY + 30);
+    ctx.fillText('📖 ' + bookName, 100, lineY + 30);
   }
   if (authorName) {
     ctx.fillStyle = '#64748b';
     ctx.font = '22px -apple-system, "SF Arabic", system-ui, sans-serif';
     ctx.fillText('✍ ' + authorName, 100, lineY + 80);
   }
+
+  // العلامة المائية رمادية خفيفة
   ctx.save();
-  ctx.globalAlpha = 0.3;
-  ctx.fillStyle = accent;
-  ctx.font = '16px -apple-system, system-ui, sans-serif';
-  ctx.textAlign = 'right'; ctx.direction = 'ltr';
-  ctx.fillText('design by sab3-77', W - 30, H - 30);
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = '#0f172a';
+  ctx.font = 'bold 32px -apple-system, system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const positions = [
+    { x: W * 0.25, y: H * 0.20, rot: -22 },
+    { x: W * 0.75, y: H * 0.38, rot: -22 },
+    { x: W * 0.28, y: H * 0.60, rot: -22 },
+    { x: W * 0.72, y: H * 0.80, rot: -22 },
+  ];
+  for (const p of positions) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot * Math.PI / 180);
+    ctx.fillText('sab3-77', 0, 0);
+    ctx.restore();
+  }
   ctx.restore();
 }
 
