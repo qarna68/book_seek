@@ -35,11 +35,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 }
 .field:focus { outline: 2px solid #2b6cb0; border-color: transparent; }
 
-.row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
+.row { display: flex; gap: 8px; margin-bottom: 10px; }
 .btn {
   flex: 1;
   padding: 12px;
@@ -61,150 +57,45 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .btn-red { background: #c53030; }
 .btn-gray { background: #718096; }
 
-.status {
-  text-align: center;
-  font-size: 12px;
-  color: #718096;
-  padding: 8px;
-  min-height: 30px;
-}
+.status { text-align: center; font-size: 12px; color: #718096; padding: 8px; min-height: 30px; }
 .status.ok { color: #2f855a; font-weight: 700; }
 .status.err { color: #c53030; font-weight: 700; }
 
-/* بطاقات الاقتباسات */
 .quotes { margin-top: 12px; }
-.card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 14px;
-  margin-bottom: 10px;
-}
-.card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-.star {
-  font-size: 24px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #a0aec0;
-  padding: 0;
-  line-height: 1;
-}
+.card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.star { font-size: 24px; background: none; border: none; cursor: pointer; color: #a0aec0; padding: 0; line-height: 1; }
 .star.on { color: #d69e2e; }
-.q-num {
-  font-weight: 700;
-  font-size: 14px;
-  color: #2b6cb0;
-}
-.q-text {
-  font-size: 15px;
-  line-height: 1.9;
-  text-align: right;
-  color: #1a1a1a;
-  margin-bottom: 12px;
-  white-space: pre-wrap;
-}
-.card-actions {
-  display: flex;
-  gap: 6px;
-}
-.card-actions .btn {
-  font-size: 12px;
-  padding: 8px;
-}
+.q-num { font-weight: 700; font-size: 14px; color: #2b6cb0; }
+.q-text { font-size: 15px; line-height: 1.9; text-align: right; color: #1a1a1a; margin-bottom: 12px; white-space: pre-wrap; }
+.card-actions { display: flex; gap: 6px; }
+.card-actions .btn { font-size: 12px; padding: 8px; }
 
-/* نافذة المكتبة */
-.modal {
-  position: fixed;
-  inset: 0;
-  background: #f8f9fa;
-  z-index: 100;
-  padding: 16px;
-  padding-top: max(16px, env(safe-area-inset-top));
-  overflow-y: auto;
-}
-.modal-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
+.modal { position: fixed; inset: 0; background: #f8f9fa; z-index: 100; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); overflow-y: auto; }
+.modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .modal-head h2 { font-size: 18px; }
-.filter-row {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
+.filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .filter-row .btn { padding: 10px; font-size: 13px; }
 
-/* التنبيهات */
-.toast {
-  position: fixed;
-  bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%) translateY(100px);
-  background: rgba(0,0,0,0.9);
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 10px;
-  font-size: 13px;
-  z-index: 200;
-  transition: transform 0.3s;
-  max-width: 90%;
-  text-align: center;
-}
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: rgba(0,0,0,0.9); color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 200; transition: transform 0.3s; max-width: 90%; text-align: center; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
-/* Progress */
-.progress {
-  background: #e2e8f0;
-  border-radius: 8px;
-  height: 6px;
-  overflow: hidden;
-  margin: 8px 0;
-}
-.progress-bar {
-  background: #2b6cb0;
-  height: 100%;
-  width: 0;
-  transition: width 0.3s;
-}
+.progress { background: #e2e8f0; border-radius: 8px; height: 6px; overflow: hidden; margin: 8px 0; }
+.progress-bar { background: #2b6cb0; height: 100%; width: 0; transition: width 0.3s; }
 
-/* الصور الناتجة */
-.img-preview {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.9);
-  z-index: 300;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  flex-direction: column;
-  gap: 16px;
-}
-.img-preview img {
-  max-width: 100%;
-  max-height: 70vh;
-  border-radius: 12px;
-}
+.img-preview { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; flex-direction: column; gap: 16px; }
+.img-preview img { max-width: 100%; max-height: 70vh; border-radius: 12px; }
 .img-preview .btn { max-width: 200px; }
 </style>
 </head>
 <body>
 
-<!-- الشاشة الرئيسية -->
 <div id="main">
   <h1>✨ استخراج اقتباسات ذكي</h1>
 
   <input id="apiKey" class="field" type="password" placeholder="مفتاح OpenRouter (sk-or-v1-...)">
-
   <input id="bookName" class="field" type="text" placeholder="اسم الكتاب (اختياري)">
+  <input id="authorName" class="field" type="text" placeholder="اسم المؤلف (اختياري)">
 
   <button id="pickPdfBtn" class="btn btn-dark" style="width:100%; margin-bottom:10px;">
     📕 اختيار ملف PDF
@@ -227,7 +118,6 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   <div id="quotes" class="quotes"></div>
 </div>
 
-<!-- المكتبة -->
 <div id="library" class="modal hidden">
   <div class="modal-head">
     <h2>📚 مكتبة الاقتباسات</h2>
@@ -241,7 +131,6 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   <div id="libList"></div>
 </div>
 
-<!-- معاينة الصورة -->
 <div id="imgPreview" class="img-preview hidden">
   <img id="previewImg" alt="preview">
   <div class="row" style="width:100%;max-width:400px;">
@@ -255,18 +144,18 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 <script>
 'use strict';
 
-// ============== الإعدادات العامة ==============
 const STORAGE_KEY = 'quotes_library_v1';
 const API_KEY_STORAGE = 'quotes_api_key';
+const AUTHOR_STORAGE = 'quotes_author';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-// ============== الحالة ==============
 let state = {
   pdfFile: null,
   pdfText: '',
   pdfName: '',
+  authorName: '',
   quotes: [],
   quoteCount: 10,
   library: [],
@@ -274,25 +163,17 @@ let state = {
   busy: false,
 };
 
-// ============== تحميل المكتبة ==============
 function loadLibrary() {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
     state.library = data ? JSON.parse(data) : [];
-  } catch (e) {
-    state.library = [];
-  }
+  } catch (e) { state.library = []; }
 }
 
 function saveLibrary() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.library));
-  } catch (e) {
-    console.warn('فشل حفظ المكتبة', e);
-  }
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.library)); } catch (e) {}
 }
 
-// ============== التنبيهات ==============
 function toast(msg, ms) {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -314,11 +195,15 @@ function showProgress(show, percent) {
   if (percent !== undefined) bar.style.width = percent + '%';
 }
 
-// ============== حفظ واسترجاع المفتاح ==============
 function loadApiKey() {
   try {
     const k = localStorage.getItem(API_KEY_STORAGE);
     if (k) document.getElementById('apiKey').value = k;
+    const a = localStorage.getItem(AUTHOR_STORAGE);
+    if (a) {
+      document.getElementById('authorName').value = a;
+      state.authorName = a;
+    }
   } catch (e) {}
 }
 
@@ -326,18 +211,17 @@ function saveApiKey(key) {
   try { localStorage.setItem(API_KEY_STORAGE, key); } catch (e) {}
 }
 
-// ============== استخراج النص من PDF ==============
+function saveAuthor(a) {
+  try { localStorage.setItem(AUTHOR_STORAGE, a); } catch (e) {}
+}
+
 async function extractPdfText(file) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const totalPages = pdf.numPages;
-
-  // اختيار نطاق عشوائي من الصفحات (30 صفحة)
   const MAX = 30;
   let start = 1;
-  if (totalPages > MAX) {
-    start = Math.floor(Math.random() * (totalPages - MAX)) + 1;
-  }
+  if (totalPages > MAX) start = Math.floor(Math.random() * (totalPages - MAX)) + 1;
   const end = Math.min(start + MAX - 1, totalPages);
 
   let text = '';
@@ -352,15 +236,10 @@ async function extractPdfText(file) {
   return { text, totalPages };
 }
 
-// ============== تنظيف النص ==============
 function cleanPdfText(text) {
-  // احذف الأحرف الصينية واليابانية والكورية
   text = text.replace(/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]+/g, '');
-  // احذف الأحرف التحكمية
   text = text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
-  // احذف الإيموجي
   text = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
-  // ضغط المسافات
   text = text.replace(/[ \t]+/g, ' ');
   text = text.replace(/\n{3,}/g, '\n\n');
   return text.trim();
@@ -368,12 +247,9 @@ function cleanPdfText(text) {
 
 function cleanOutputText(text) {
   text = text.replace(/<unk>/g, '').replace(/\[UNK\]/g, '');
-  if (text.includes('```')) {
-    text = text.replace(/```[a-zA-Z]*\n/g, '').replace(/```/g, '');
-  }
+  if (text.includes('```')) text = text.replace(/```[a-zA-Z]*\n/g, '').replace(/```/g, '');
   text = text.replace(/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]+/g, '');
   text = text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
-
   const lines = text.split('\n');
   const filtered = [];
   for (const line of lines) {
@@ -410,7 +286,6 @@ function truncateAtLine(text, maxChars) {
   return text.substring(0, cut > 0 ? cut : maxChars);
 }
 
-// ============== استدعاء OpenRouter ==============
 const MODELS = [
   'openai/gpt-oss-120b',
   'google/gemini-2.5-flash',
@@ -444,7 +319,6 @@ async function callOpenRouter(apiKey, bookName, bookText, count) {
 ${bookText}`;
 
   const errors = [];
-
   for (const model of MODELS) {
     setStatus(`(${model.split('/').pop()}) جاري الاتصال...`);
     try {
@@ -469,10 +343,7 @@ ${bookText}`;
         let answer = data.choices?.[0]?.message?.content || '';
         answer = cleanOutputText(answer);
         const arabic = (answer.match(/[\u0600-\u06FF]/g) || []).length;
-        if (arabic < 50) {
-          errors.push(`${model}: مخرجات غير عربية`);
-          continue;
-        }
+        if (arabic < 50) { errors.push(`${model}: مخرجات غير عربية`); continue; }
         return { text: answer, model: model };
       }
 
@@ -480,7 +351,6 @@ ${bookText}`;
       const msg = errData.error?.message || `HTTP ${res.status}`;
       errors.push(`${model}: ${msg.substring(0, 100)}`);
 
-      // تأخير قبل النموذج التالي
       if ([429, 500, 502, 503].includes(res.status)) {
         await new Promise(r => setTimeout(r, 3000));
       }
@@ -488,66 +358,131 @@ ${bookText}`;
       errors.push(`${model}: ${e.message}`);
     }
   }
-
   throw new Error('فشلت جميع المحاولات:\n' + errors.join('\n'));
 }
 
-// ============== توليد الصورة (Canvas) ==============
-async function generateQuoteImage(text, bookName) {
+// ============== توليد الصورة (المحسّن) ==============
+async function generateQuoteImage(text, bookName, authorName) {
   const W = 1080, H = 1350;
   const canvas = document.createElement('canvas');
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  // خلفية كريمية
+  // ===== 1) الخلفية الكريمية =====
   ctx.fillStyle = '#fdfaf2';
   ctx.fillRect(0, 0, W, H);
 
-  // علامة الاقتباس
-  ctx.fillStyle = '#2b6cb0';
-  ctx.font = '200px -apple-system, "SF Arabic", system-ui';
+  // ===== 2) البروز الداخلي (Inner Shadow) =====
+  const edge = 130;
+  const shadowColor = '60, 50, 35';
+  // أعلى
+  let g = ctx.createLinearGradient(0, 0, 0, edge);
+  g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
+  g.addColorStop(1, `rgba(${shadowColor}, 0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, edge);
+  // أسفل
+  g = ctx.createLinearGradient(0, H, 0, H - edge);
+  g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
+  g.addColorStop(1, `rgba(${shadowColor}, 0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, H - edge, W, edge);
+  // يمين
+  g = ctx.createLinearGradient(W, 0, W - edge, 0);
+  g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
+  g.addColorStop(1, `rgba(${shadowColor}, 0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(W - edge, 0, edge, H);
+  // يسار
+  g = ctx.createLinearGradient(0, 0, edge, 0);
+  g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
+  g.addColorStop(1, `rgba(${shadowColor}, 0)`);
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, edge, H);
+
+  // ===== 3) إطار خارجي رقيق =====
+  ctx.strokeStyle = 'rgba(60, 50, 35, 0.18)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(28, 28, W - 56, H - 56);
+
+  // ===== 4) علامة الاقتباس (أعلى يسار) =====
+  ctx.direction = 'ltr';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
-  ctx.direction = 'ltr';
-  ctx.fillText('\u201C', 70, 30);
+  ctx.fillStyle = '#2b6cb0';
+  ctx.font = 'bold 220px -apple-system, "SF Arabic", system-ui, sans-serif';
+  ctx.fillText('\u201C', 60, 10);
 
-  // نص الاقتباس (RTL)
+  // ===== 5) نص الاقتباس (بخط أكبر) =====
   ctx.direction = 'rtl';
   ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
   ctx.fillStyle = '#1a1a1a';
-  ctx.font = '44px -apple-system, "SF Arabic", system-ui';
+  ctx.font = '52px -apple-system, "SF Arabic", system-ui, sans-serif';
 
   const maxWidth = W - 180;
-  const lineHeight = 72;
+  const lineHeight = 88;
   const lines = wrapTextArabic(ctx, text, maxWidth);
 
   let y = 320;
-  const maxY = H - 260;
+  const maxY = H - 320;
   for (const line of lines) {
     if (y + lineHeight > maxY) break;
     ctx.fillText(line, W - 90, y);
     y += lineHeight;
   }
 
-  // اسم الكتاب
+  // ===== 6) الكاتب والكتاب (أسفل يسار) =====
+  ctx.textAlign = 'left';
+  ctx.direction = 'rtl';
+
   if (bookName) {
-    ctx.fillStyle = '#737373';
-    ctx.font = '26px -apple-system, "SF Arabic", system-ui';
-    ctx.textAlign = 'right';
-    ctx.fillText('📖 ' + bookName, W - 90, H - 180);
+    ctx.fillStyle = '#4a5568';
+    ctx.font = 'bold 28px -apple-system, "SF Arabic", system-ui, sans-serif';
+    ctx.fillText('📖 ' + bookName, 90, H - 210);
   }
 
+  if (authorName) {
+    ctx.fillStyle = '#718096';
+    ctx.font = '24px -apple-system, "SF Arabic", system-ui, sans-serif';
+    ctx.fillText('✍ ' + authorName, 90, H - 165);
+  }
+
+  // ===== 7) العلامة المائية (باهتة، متعددة المواضع) =====
+  ctx.save();
+  ctx.globalAlpha = 0.07;
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 34px -apple-system, system-ui, sans-serif';
+  ctx.direction = 'ltr';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  const watermarkPositions = [
+    { x: W * 0.25, y: H * 0.22, rot: -22 },
+    { x: W * 0.75, y: H * 0.42, rot: -22 },
+    { x: W * 0.28, y: H * 0.62, rot: -22 },
+    { x: W * 0.72, y: H * 0.82, rot: -22 },
+  ];
+
+  for (const p of watermarkPositions) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot * Math.PI / 180);
+    ctx.fillText('تصميم / sab3-77', 0, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+
+  // ===== 8) الإخراج PNG =====
   return new Promise(resolve => {
     canvas.toBlob(blob => resolve(blob), 'image/png');
   });
 }
 
-// تقسيم النص العربي على الأسطر
 function wrapTextArabic(ctx, text, maxWidth) {
   const lines = [];
   const paragraphs = text.split('\n');
-
   for (const para of paragraphs) {
     if (!para.trim()) { lines.push(''); continue; }
     const words = para.split(/\s+/);
@@ -571,10 +506,8 @@ function wrapTextArabic(ctx, text, maxWidth) {
 function renderQuotes() {
   const container = document.getElementById('quotes');
   container.innerHTML = '';
-
   if (!state.quotes.length) return;
 
-  // رأس
   const header = document.createElement('div');
   header.style.cssText = 'font-size:13px;color:#4a5568;text-align:right;padding:8px;margin-bottom:8px;line-height:1.7;';
   header.textContent = state.currentHeader;
@@ -583,9 +516,7 @@ function renderQuotes() {
   state.quotes.forEach((quote, i) => {
     const card = document.createElement('div');
     card.className = 'card';
-
     const isFav = isFavorite(quote, state.pdfName);
-
     card.innerHTML = `
       <div class="card-head">
         <button class="star ${isFav ? 'on' : ''}" data-idx="${i}">${isFav ? '★' : '☆'}</button>
@@ -601,7 +532,6 @@ function renderQuotes() {
     container.appendChild(card);
   });
 
-  // ربط الأحداث
   container.querySelectorAll('.star').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx);
@@ -628,33 +558,24 @@ function escapeHtml(s) {
   }[c]));
 }
 
-// ============== النسخ والمشاركة ==============
 async function copyQuote(text) {
   try {
     await navigator.clipboard.writeText(text);
     toast('✅ تم نسخ الاقتباس');
-  } catch (e) {
-    toast('❌ فشل النسخ');
-  }
+  } catch (e) { toast('❌ فشل النسخ'); }
 }
 
 async function shareQuote(text) {
   if (navigator.share) {
-    try {
-      await navigator.share({ text: text });
-    } catch (e) {
-      if (e.name !== 'AbortError') copyQuote(text);
-    }
-  } else {
-    copyQuote(text);
-  }
+    try { await navigator.share({ text: text }); }
+    catch (e) { if (e.name !== 'AbortError') copyQuote(text); }
+  } else copyQuote(text);
 }
 
-// ============== إظهار الصورة ==============
 async function showQuoteImage(text) {
   setStatus('جاري توليد الصورة...');
   try {
-    const blob = await generateQuoteImage(text, state.pdfName);
+    const blob = await generateQuoteImage(text, state.pdfName, state.authorName);
     const url = URL.createObjectURL(blob);
     document.getElementById('previewImg').src = url;
     document.getElementById('imgPreview').classList.remove('hidden');
@@ -673,13 +594,9 @@ function closePreview() {
 async function shareImage(blob) {
   const file = new File([blob], 'quote.png', { type: 'image/png' });
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file] });
-    } catch (e) {
-      if (e.name !== 'AbortError') toast('تعذرت المشاركة');
-    }
+    try { await navigator.share({ files: [file] }); }
+    catch (e) { if (e.name !== 'AbortError') toast('تعذرت المشاركة'); }
   } else {
-    // بديل: تحميل الصورة
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -689,7 +606,6 @@ async function shareImage(blob) {
   }
 }
 
-// ============== المفضلة والمكتبة ==============
 function findQuote(text, book) {
   return state.library.find(q => q.text === text && q.book === book);
 }
@@ -733,14 +649,11 @@ function closeLibrary() {
 function renderLibrary(filter) {
   const list = document.getElementById('libList');
   list.innerHTML = '';
-
   let items = filter === 'fav'
     ? state.library.filter(q => q.favorite)
     : [...state.library];
   items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-
   document.getElementById('libCount').textContent = items.length + ' اقتباس';
-
   document.getElementById('filterAll').className = 'btn ' + (filter === 'all' ? 'btn-purple' : 'btn-gray');
   document.getElementById('filterFav').className = 'btn ' + (filter === 'fav' ? 'btn-purple' : 'btn-gray');
 
@@ -765,34 +678,26 @@ function renderLibrary(filter) {
         <button class="btn btn-red" data-act="del">🗑 حذف</button>
       </div>
     `;
-    const starBtn = card.querySelector('.star');
-    const copyBtn = card.querySelector('[data-act="copy"]');
-    const shareBtn = card.querySelector('[data-act="share"]');
-    const delBtn = card.querySelector('[data-act="del"]');
-
-    starBtn.addEventListener('click', () => {
+    card.querySelector('.star').addEventListener('click', () => {
       q.favorite = !q.favorite;
       saveLibrary();
       renderLibrary(filter);
     });
-    copyBtn.addEventListener('click', () => copyQuote(q.text));
-    shareBtn.addEventListener('click', () => shareQuote(q.text));
-    delBtn.addEventListener('click', () => {
+    card.querySelector('[data-act="copy"]').addEventListener('click', () => copyQuote(q.text));
+    card.querySelector('[data-act="share"]').addEventListener('click', () => shareQuote(q.text));
+    card.querySelector('[data-act="del"]').addEventListener('click', () => {
       if (confirm('حذف هذا الاقتباس؟')) {
         state.library = state.library.filter(x => x.id !== q.id);
         saveLibrary();
         renderLibrary(filter);
       }
     });
-
     list.appendChild(card);
   });
 }
 
-// ============== الاستخراج الرئيسي ==============
 async function generate() {
   if (state.busy) return;
-
   const apiKey = document.getElementById('apiKey').value.trim();
   if (!apiKey) { toast('❌ أدخل مفتاح OpenRouter'); return; }
   if (!state.pdfFile) { toast('❌ اختر ملف PDF أولاً'); return; }
@@ -826,13 +731,11 @@ async function generate() {
     state.quotes = quotes;
     state.currentHeader = '📕 ' + state.pdfName + '\n🤖 ' + model.split('/').pop();
 
-    // احفظ في المكتبة
     quotes.forEach(q => ensureInLibrary(q, state.pdfName));
 
     renderQuotes();
     setStatus(`✓ ${quotes.length} اقتباسات — اضغط مجدداً للمزيد`, 'ok');
     genBtn.textContent = '🔄 اقتباسات جديدة';
-
   } catch (e) {
     console.error(e);
     setStatus('حدث خطأ', 'err');
@@ -846,7 +749,6 @@ async function generate() {
   }
 }
 
-// ============== الأحداث ==============
 document.addEventListener('DOMContentLoaded', () => {
   loadLibrary();
   loadApiKey();
@@ -861,8 +763,8 @@ document.addEventListener('DOMContentLoaded', () => {
     state.pdfFile = file;
     state.pdfName = file.name;
     if (!document.getElementById('bookName').value) {
-      document.getElementById('bookName').value =
-        file.name.replace(/\.pdf$/i, '');
+      document.getElementById('bookName').value = file.name.replace(/\.pdf$/i, '');
+      state.pdfName = file.name.replace(/\.pdf$/i, '');
     }
     setStatus('✓ ' + file.name, 'ok');
     state.quotes = [];
@@ -885,6 +787,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('bookName').addEventListener('input', (e) => {
     state.pdfName = e.target.value || 'كتاب';
+  });
+
+  document.getElementById('authorName').addEventListener('input', (e) => {
+    state.authorName = e.target.value;
+    saveAuthor(e.target.value);
   });
 });
 </script>
