@@ -9,7 +9,7 @@
 <title>مستخرج الاقتباسات الذكي</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Aref+Ruqaa:wght@400;700&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Aref+Ruqaa:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -111,7 +111,6 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 <div id="toast" class="toast"></div>
 
 <script>
-// ✅ عرض أي خطأ مباشرة على الصفحة
 function showErr(msg) {
   try {
     document.getElementById('errText').textContent = String(msg).substring(0, 500);
@@ -127,14 +126,11 @@ window.addEventListener('unhandledrejection', function(ev) {
 
 'use strict';
 
-// ✅ حماية pdfjsLib من الفشل
 let pdfjsReady = false;
 try {
   if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     pdfjsReady = true;
-  } else {
-    showErr('pdf.js لم يُحمّل — تحقق من الإنترنت');
   }
 } catch (e) { showErr('pdfjs init: ' + e.message); }
 
@@ -145,7 +141,8 @@ const STYLE_STORAGE = 'quotes_style';
 
 const STYLE_NAMES = { naskh: '📜 نسخي فاخر', oriental: '🌙 شرقي', classic: '🏛️ كلاسيكي', modern: '⚡ حديث' };
 
-const ARABIC_FONT_STACK = '"Amiri", "Noto Naskh Arabic", "Scheherazade New", Georgia, serif';
+// ✅ خطوط عربية (Amiri الأساسية + احتياطية)
+const FONT_FAMILY = "Amiri, 'Noto Naskh Arabic', 'Scheherazade New', Georgia, serif";
 
 let state = {
   pdfFile: null, pdfText: '', pdfName: '', authorName: '',
@@ -155,49 +152,24 @@ let state = {
 };
 
 let fontsReady = false;
-let warmupDone = false;
-
 async function ensureFonts() {
-  if (fontsReady && warmupDone) return;
+  if (fontsReady) return;
   try {
     if (typeof document.fonts === 'undefined' || !document.fonts.load) {
-      fontsReady = true; warmupDone = true;
-      return;
+      fontsReady = true; return;
     }
-    const tasks = [
+    await Promise.all([
       document.fonts.load('400 40px Amiri').catch(() => null),
       document.fonts.load('700 40px Amiri').catch(() => null),
       document.fonts.load('400 40px "Noto Naskh Arabic"').catch(() => null),
       document.fonts.load('700 40px "Noto Naskh Arabic"').catch(() => null),
       document.fonts.load('400 40px "Aref Ruqaa"').catch(() => null),
       document.fonts.load('700 40px "Aref Ruqaa"').catch(() => null),
-      document.fonts.load('400 40px "Scheherazade New"').catch(() => null),
-    ];
-    await Promise.all(tasks);
+    ]);
     try { await document.fonts.ready; } catch (e) {}
-
-    if (!warmupDone) {
-      const wc = document.createElement('canvas');
-      wc.width = 800; wc.height = 200;
-      const wx = wc.getContext('2d');
-      wx.direction = 'rtl';
-      wx.textAlign = 'right';
-      wx.textBaseline = 'top';
-      wx.font = `700 40px ${ARABIC_FONT_STACK}`;
-      const tests = [
-        'الاستمرارية أهم من الشغف',
-        'الحمد لله رب العالمين',
-        'محمد عبد الله الرحمن الرحيم',
-      ];
-      for (const t of tests) {
-        try { wx.fillText(t, 780, 40, 760); } catch (e) {}
-        try { wx.measureText(t); } catch (e) {}
-      }
-      await new Promise(r => setTimeout(r, 400));
-      warmupDone = true;
-    }
+    await new Promise(r => setTimeout(r, 300));
     fontsReady = true;
-  } catch (e) { console.warn('fonts', e); fontsReady = true; warmupDone = true; }
+  } catch (e) { fontsReady = true; }
 }
 
 function loadLibrary() { try { const d = localStorage.getItem(STORAGE_KEY); state.library = d ? JSON.parse(d) : []; } catch (e) { state.library = []; } }
@@ -333,22 +305,51 @@ ${bookText}`;
   throw new Error('فشلت المحاولات:\n' + errors.join('\n'));
 }
 
-// ============== أدوات الرسم ==============
-function stripPageNumbers(text) {
-  let t = text.replace(/\s*\[صفحة\s*\d+\]\s*/g, ' ').replace(/\[\s*\]/g, ' ');
-  return t.replace(/\s+/g, ' ').trim();
+// ============== SVG Helpers ==============
+function escapeXml(s) {
+  return String(s).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
 }
 
-function wrapText(ctx, text, maxWidth) {
+// ✅ قياس عرض النص العربي عبر SVG getBBox (دقيق 100% للعربية)
+let _measureSvg = null;
+let _measureText = null;
+function measureSvgTextWidth(text, fontSize, fontWeight) {
+  const svgNS = 'http://www.w3.org/2000/svg';
+  if (!_measureSvg) {
+    _measureSvg = document.createElementNS(svgNS, 'svg');
+    _measureSvg.setAttribute('xmlns', svgNS);
+    _measureSvg.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;top:-9999px;';
+    _measureText = document.createElementNS(svgNS, 'text');
+    _measureSvg.appendChild(_measureText);
+    document.body.appendChild(_measureSvg);
+  }
+  _measureText.setAttribute('font-family', FONT_FAMILY);
+  _measureText.setAttribute('font-size', String(fontSize));
+  _measureText.setAttribute('font-weight', String(fontWeight || 700));
+  _measureText.setAttribute('direction', 'rtl');
+  _measureText.setAttribute('text-anchor', 'end');
+  _measureText.textContent = text;
+  let w = 0;
+  try { w = _measureText.getBBox().width; } catch (e) { w = text.length * fontSize * 0.5; }
+  return w;
+}
+
+function wrapArabicText(text, maxWidth, fontSize) {
   const lines = [];
-  for (const para of text.split('\n')) {
+  const paragraphs = text.split('\n');
+  for (const para of paragraphs) {
     if (!para.trim()) { lines.push(''); continue; }
     const words = para.split(/\s+/);
     let current = '';
     for (const word of words) {
       const test = current ? current + ' ' + word : word;
-      if (ctx.measureText(test).width > maxWidth && current) { lines.push(current); current = word; }
-      else current = test;
+      const w = measureSvgTextWidth(test, fontSize, 700);
+      if (w > maxWidth && current) {
+        lines.push(current);
+        current = word;
+      } else {
+        current = test;
+      }
     }
     if (current) lines.push(current);
   }
@@ -364,406 +365,319 @@ function adaptiveFontSize(len, base, min) {
   return min;
 }
 
-function drawDiamond(ctx, cx, cy, size, color) {
-  ctx.save(); ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - size); ctx.lineTo(cx + size, cy);
-  ctx.lineTo(cx, cy + size); ctx.lineTo(cx - size, cy);
-  ctx.closePath(); ctx.fill(); ctx.restore();
-}
-
-function drawFlourishCorner(ctx, cx, cy, dirX, dirY, size, color) {
-  ctx.save();
-  ctx.strokeStyle = color; ctx.fillStyle = color;
-  ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+function buildCornerSVG(cx, cy, dirX, dirY, size, color) {
   const L = size;
-  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + L * dirX, cy); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy + L * dirY); ctx.stroke();
-  ctx.beginPath(); ctx.arc(cx + L * dirX, cy, 3, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx, cy + L * dirY, 3, 0, Math.PI * 2); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(cx + 40 * dirX, cy);
-  ctx.bezierCurveTo(cx + 70 * dirX, cy + 25 * dirY, cx + 100 * dirX, cy + 10 * dirY, cx + 85 * dirX, cy + 35 * dirY);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(cx + 55 * dirX, cy + 5 * dirY);
-  ctx.quadraticCurveTo(cx + 75 * dirX, cy - 15 * dirY, cx + 90 * dirX, cy + 5 * dirY);
-  ctx.quadraticCurveTo(cx + 75 * dirX, cy + 15 * dirY, cx + 55 * dirX, cy + 5 * dirY);
-  ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(cx, cy + 40 * dirY);
-  ctx.bezierCurveTo(cx + 25 * dirX, cy + 70 * dirY, cx + 10 * dirX, cy + 100 * dirY, cx + 35 * dirX, cy + 85 * dirY);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(cx + 5 * dirX, cy + 55 * dirY);
-  ctx.quadraticCurveTo(cx - 15 * dirX, cy + 75 * dirY, cx + 5 * dirX, cy + 90 * dirY);
-  ctx.quadraticCurveTo(cx + 15 * dirX, cy + 75 * dirY, cx + 5 * dirX, cy + 55 * dirY);
-  ctx.closePath(); ctx.fill();
-  ctx.restore();
+  let g = `<g stroke="${color}" fill="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">`;
+  g += `<line x1="${cx}" y1="${cy}" x2="${cx + L*dirX}" y2="${cy}"/>`;
+  g += `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + L*dirY}"/>`;
+  g += `<circle cx="${cx + L*dirX}" cy="${cy}" r="3"/>`;
+  g += `<circle cx="${cx}" cy="${cy + L*dirY}" r="3"/>`;
+  // Curl 1
+  g += `<path d="M ${cx + 40*dirX} ${cy} C ${cx + 70*dirX} ${cy + 25*dirY}, ${cx + 100*dirX} ${cy + 10*dirY}, ${cx + 85*dirX} ${cy + 35*dirY}" fill="none"/>`;
+  // Leaf 1
+  g += `<path d="M ${cx + 55*dirX} ${cy + 5*dirY} Q ${cx + 75*dirX} ${cy - 15*dirY} ${cx + 90*dirX} ${cy + 5*dirY} Q ${cx + 75*dirX} ${cy + 15*dirY} ${cx + 55*dirX} ${cy + 5*dirY} Z" stroke="none"/>`;
+  // Curl 2
+  g += `<path d="M ${cx} ${cy + 40*dirY} C ${cx + 25*dirX} ${cy + 70*dirY}, ${cx + 10*dirX} ${cy + 100*dirY}, ${cx + 35*dirX} ${cy + 85*dirY}" fill="none"/>`;
+  // Leaf 2
+  g += `<path d="M ${cx + 5*dirX} ${cy + 55*dirY} Q ${cx - 15*dirX} ${cy + 75*dirY} ${cx + 5*dirX} ${cy + 90*dirY} Q ${cx + 15*dirX} ${cy + 75*dirY} ${cx + 5*dirX} ${cy + 55*dirY} Z" stroke="none"/>`;
+  g += '</g>';
+  return g;
 }
 
-function drawOrnamentLine(ctx, cx, y, width, color, withDiamond) {
+function buildDividerSVG(cx, y, width, color) {
   const half = width / 2;
-  ctx.save();
-  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(cx - half, y); ctx.lineTo(cx - 15, y); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx + 15, y); ctx.lineTo(cx + half, y); ctx.stroke();
-  if (withDiamond) drawDiamond(ctx, cx, y, 6, color);
-  drawDiamond(ctx, cx - half - 6, y, 3, color);
-  drawDiamond(ctx, cx + half + 6, y, 3, color);
-  ctx.restore();
+  let g = `<g stroke="${color}" fill="${color}" stroke-width="1.5">`;
+  g += `<line x1="${cx - half}" y1="${y}" x2="${cx - 15}" y2="${y}"/>`;
+  g += `<line x1="${cx + 15}" y1="${y}" x2="${cx + half}" y2="${y}"/>`;
+  g += `<polygon points="${cx},${y-6} ${cx+6},${y} ${cx},${y+6} ${cx-6},${y}" stroke="none"/>`;
+  g += `<polygon points="${cx-half-6},${y-3} ${cx-half},${y} ${cx-half-6},${y+3} ${cx-half-12},${y}" stroke="none"/>`;
+  g += `<polygon points="${cx+half+6},${y-3} ${cx+half},${y} ${cx+half+6},${y+3} ${cx+half+12},${y}" stroke="none"/>`;
+  g += '</g>';
+  return g;
 }
 
-function fillText3D(ctx, text, x, y, color, highlight, shadow, maxWidth) {
-  const mw = maxWidth || (ctx.measureText(text).width + 200);
-  ctx.save();
-  ctx.fillStyle = shadow;
-  ctx.fillText(text, x + 2, y + 3, mw);
-  ctx.fillStyle = highlight;
-  ctx.fillText(text, x - 1, y - 1, mw);
-  ctx.fillStyle = color;
-  ctx.fillText(text, x, y, mw);
-  ctx.restore();
-}
+// ✅ بناء الاقتباس كاملاً كـ SVG (نصوص صحيحة 100%)
+function buildQuoteSVG(opts) {
+  const { W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config } = opts;
+  const NS = 'xmlns="http://www.w3.org/2000/svg"';
+  let s = `<svg ${NS} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
 
-function setArabicContext(ctx) {
-  ctx.direction = 'rtl';
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-}
+  // Defs
+  s += `<defs>
+    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
+      ${config.bgColors.map((c, i) => `<stop offset="${(i / (config.bgColors.length - 1) * 100).toFixed(1)}%" stop-color="${c}"/>`).join('')}
+    </linearGradient>
+    <radialGradient id="vgGrad" cx="50%" cy="50%" r="60%">
+      <stop offset="0%" stop-color="${config.vignette[0]}"/>
+      <stop offset="100%" stop-color="${config.vignette[1]}"/>
+    </radialGradient>
+  </defs>`;
 
-function drawWatermark(ctx, W, H, color) {
-  ctx.save();
-  ctx.globalAlpha = 0.12;
-  ctx.fillStyle = color;
-  ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `bold 32px ${ARABIC_FONT_STACK}`;
-  const positions = [
-    { x: W * 0.25, y: H * 0.20, rot: -22 },
-    { x: W * 0.75, y: H * 0.38, rot: -22 },
-    { x: W * 0.28, y: H * 0.60, rot: -22 },
-    { x: W * 0.72, y: H * 0.80, rot: -22 },
-  ];
-  for (const p of positions) {
-    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180);
-    ctx.fillText('تصميم / sab3-77', 0, 0); ctx.restore();
-  }
-  ctx.restore();
-}
+  // Background
+  s += `<rect width="${W}" height="${H}" fill="url(#bgGrad)"/>`;
+  s += `<rect width="${W}" height="${H}" fill="url(#vgGrad)"/>`;
 
-function layoutTextBlock(H, totalTextHeight) {
-  const topDivider = 245;
-  const bottomDivider = H - 380;
-  const centerY = (topDivider + bottomDivider) / 2;
-  let startY = centerY - totalTextHeight / 2;
-  if (startY < topDivider + 50) startY = topDivider + 50;
-  if (startY + totalTextHeight > bottomDivider - 50) startY = bottomDivider - 50 - totalTextHeight;
-  return { startY, topDivider, bottomDivider };
-}
-
-// ============== النمط 1: نسخي فاخر ==============
-function drawNaskh(ctx, W, H, text, bookName, authorName) {
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#0a1a30'); bg.addColorStop(0.5, '#0f2542'); bg.addColorStop(1, '#071224');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-  const vg = ctx.createRadialGradient(W/2, H/2, W*0.15, W/2, H/2, W*0.9);
-  vg.addColorStop(0, 'rgba(70, 110, 170, 0.22)');
-  vg.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
-  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
-
-  ctx.save(); ctx.globalAlpha = 0.18;
-  for (let i = 0; i < 400; i++) {
-    ctx.fillStyle = Math.random() > 0.5 ? '#c9a961' : '#e8d5a8';
-    ctx.fillRect(Math.random() * W, Math.random() * H, 1, 1);
-  }
-  ctx.restore();
-
-  const gold = '#c9a961', goldDark = '#8a6d2f', goldLight = '#e8d5a8', goldBright = '#f5e6b8';
-  const textColor = '#e8d5a8';
-  const textHighlight = 'rgba(255, 245, 200, 0.85)';
-  const textShadow = 'rgba(0, 0, 0, 0.85)';
-
-  ctx.strokeStyle = gold; ctx.lineWidth = 5;
-  ctx.strokeRect(38, 38, W - 76, H - 76);
-  ctx.strokeStyle = goldDark; ctx.lineWidth = 1.5;
-  ctx.strokeRect(58, 58, W - 116, H - 116);
-  ctx.strokeStyle = 'rgba(201,169,97,0.5)'; ctx.lineWidth = 1;
-  ctx.strokeRect(66, 66, W - 132, H - 132);
-
-  const cs = 130;
-  drawFlourishCorner(ctx, 66, 66, 1, 1, cs, gold);
-  drawFlourishCorner(ctx, W - 66, 66, -1, 1, cs, gold);
-  drawFlourishCorner(ctx, 66, H - 66, 1, -1, cs, gold);
-  drawFlourishCorner(ctx, W - 66, H - 66, -1, -1, cs, gold);
-
-  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillStyle = goldBright;
-  ctx.font = 'bold 200px "Aref Ruqaa", Georgia, serif';
-  ctx.fillText('\u201C', 90, 15);
-
-  const len = text.length;
-  const fontSize = adaptiveFontSize(len, 74, 46);
-  const lineHeight = Math.round(fontSize * 1.75);
-  setArabicContext(ctx);
-  ctx.font = `700 ${fontSize}px ${ARABIC_FONT_STACK}`;
-  const maxWidth = W - 200;
-  const lines = wrapText(ctx, text, maxWidth);
-  const totalTextHeight = lines.length * lineHeight;
-
-  const { startY, topDivider, bottomDivider } = layoutTextBlock(H, totalTextHeight);
-
-  drawOrnamentLine(ctx, W/2, topDivider, 300, gold, true);
-
-  let y = startY;
-  for (const line of lines) {
-    fillText3D(ctx, line, W - 100, y, textColor, textHighlight, textShadow, maxWidth);
-    y += lineHeight;
-  }
-
-  drawOrnamentLine(ctx, W/2, bottomDivider, 240, gold, true);
-
-  setArabicContext(ctx);
-  ctx.textAlign = 'center';
-  if (bookName) {
-    ctx.font = `700 34px ${ARABIC_FONT_STACK}`;
-    const bookText = '📖 ﴿ ' + bookName + ' ﴾';
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillText(bookText, W/2 + 2, H - 235 + 3, W - 200);
-    ctx.fillStyle = goldBright;
-    ctx.fillText(bookText, W/2, H - 235, W - 200);
-    ctx.restore();
-  }
-  if (authorName) {
-    ctx.font = `italic 400 26px ${ARABIC_FONT_STACK}`;
-    ctx.fillStyle = gold;
-    ctx.fillText('✍ ' + authorName, W/2, H - 180, W - 200);
-  }
-
-  drawWatermark(ctx, W, H, goldLight);
-}
-
-// ============== النمط 2: شرقي ==============
-function drawOriental(ctx, W, H, text, bookName, authorName) {
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#14213d'); bg.addColorStop(0.5, '#1a2b4a'); bg.addColorStop(1, '#0d1b2f');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-  ctx.save(); ctx.globalAlpha = 0.06; ctx.strokeStyle = '#c9a961'; ctx.lineWidth = 1.2;
-  const spacing = 90;
-  for (let yy = -spacing; yy < H + spacing; yy += spacing) {
-    for (let xx = -spacing; xx < W + spacing; xx += spacing) {
-      ctx.save(); ctx.translate(xx, yy); ctx.strokeRect(-26, -26, 52, 52);
-      ctx.rotate(Math.PI/4); ctx.strokeRect(-26, -26, 52, 52); ctx.restore();
-      ctx.save(); ctx.translate(xx + spacing/2, yy + spacing/2); ctx.strokeRect(-26, -26, 52, 52);
-      ctx.rotate(Math.PI/4); ctx.strokeRect(-26, -26, 52, 52); ctx.restore();
+  // Islamic pattern for oriental
+  if (config.patternColor) {
+    const spacing = 90;
+    s += `<g stroke="${config.patternColor}" fill="none" stroke-width="1.2" opacity="0.06">`;
+    for (let yy = 0; yy < H + spacing; yy += spacing) {
+      for (let xx = 0; xx < W + spacing; xx += spacing) {
+        s += `<rect x="${xx - 26}" y="${yy - 26}" width="52" height="52" transform="rotate(0 ${xx} ${yy})"/>`;
+        s += `<rect x="${xx - 26}" y="${yy - 26}" width="52" height="52" transform="rotate(45 ${xx} ${yy})"/>`;
+        const ox = xx + spacing/2, oy = yy + spacing/2;
+        s += `<rect x="${ox - 26}" y="${oy - 26}" width="52" height="52"/>`;
+        s += `<rect x="${ox - 26}" y="${oy - 26}" width="52" height="52" transform="rotate(45 ${ox} ${oy})"/>`;
+      }
     }
-  }
-  ctx.restore();
-
-  ctx.strokeStyle = 'rgba(201,169,97,0.9)'; ctx.lineWidth = 3;
-  ctx.strokeRect(50, 50, W - 100, H - 100);
-  ctx.strokeStyle = 'rgba(201,169,97,0.35)'; ctx.lineWidth = 1;
-  ctx.strokeRect(70, 70, W - 140, H - 140);
-
-  const cs = 120;
-  drawFlourishCorner(ctx, 70, 70, 1, 1, cs, 'rgba(201,169,97,0.85)');
-  drawFlourishCorner(ctx, W - 70, 70, -1, 1, cs, 'rgba(201,169,97,0.85)');
-  drawFlourishCorner(ctx, 70, H - 70, 1, -1, cs, 'rgba(201,169,97,0.85)');
-  drawFlourishCorner(ctx, W - 70, H - 70, -1, -1, cs, 'rgba(201,169,97,0.85)');
-
-  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(201,169,97,0.9)';
-  ctx.font = 'bold 220px "Aref Ruqaa", Georgia, serif';
-  ctx.fillText('\u201C', 80, 10);
-
-  const len = text.length;
-  const fontSize = adaptiveFontSize(len, 70, 42);
-  const lineHeight = Math.round(fontSize * 1.75);
-  setArabicContext(ctx);
-  ctx.font = `700 ${fontSize}px ${ARABIC_FONT_STACK}`;
-  const maxWidth = W - 220;
-  const lines = wrapText(ctx, text, maxWidth);
-  const totalTextHeight = lines.length * lineHeight;
-
-  const { startY, topDivider, bottomDivider } = layoutTextBlock(H, totalTextHeight);
-
-  drawOrnamentLine(ctx, W/2, topDivider, 300, 'rgba(201,169,97,0.75)', true);
-
-  let y = startY;
-  for (const line of lines) {
-    fillText3D(ctx, line, W - 110, y, '#f5ecd9', 'rgba(255,255,255,0.35)', 'rgba(0,0,0,0.55)', maxWidth);
-    y += lineHeight;
+    s += `</g>`;
   }
 
-  drawOrnamentLine(ctx, W/2, bottomDivider, 220, 'rgba(201,169,97,0.6)', true);
+  // Stars for naskh
+  if (config.stars) {
+    s += `<g fill="${config.starsColor}" opacity="0.18">`;
+    for (let i = 0; i < 200; i++) {
+      const x = Math.random() * W;
+      const y = Math.random() * H;
+      s += `<rect x="${x.toFixed(0)}" y="${y.toFixed(0)}" width="1" height="1"/>`;
+    }
+    s += `</g>`;
+  }
 
-  setArabicContext(ctx);
-  ctx.textAlign = 'center';
+  // Frames
+  for (const f of config.frames) {
+    const inset = f.inset;
+    s += `<rect x="${inset}" y="${inset}" width="${W - inset*2}" height="${H - inset*2}" fill="none" stroke="${f.color}" stroke-width="${f.width}"/>`;
+  }
+
+  // Corners
+  if (config.cornerColor) {
+    const c = config.cornerInset || 66;
+    s += buildCornerSVG(c, c, 1, 1, config.cornerSize, config.cornerColor);
+    s += buildCornerSVG(W - c, c, -1, 1, config.cornerSize, config.cornerColor);
+    s += buildCornerSVG(c, H - c, 1, -1, config.cornerSize, config.cornerColor);
+    s += buildCornerSVG(W - c, H - c, -1, -1, config.cornerSize, config.cornerColor);
+  }
+
+  // Quote mark
+  s += `<text x="90" y="205" font-family="Aref Ruqaa, Georgia, serif" font-weight="bold" font-size="200" fill="${config.quoteMarkColor}" text-anchor="start">&#8220;</text>`;
+
+  // Top divider
+  s += buildDividerSVG(W/2, topDivider, config.topDividerWidth || 300, config.ornamentColor);
+
+  // Text lines - 3 passes (shadow, highlight, main)
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line) continue;
+    const baselineY = startY + i * lineHeight + fontSize * 0.85;
+    const common = `font-family="${FONT_FAMILY}" font-weight="700" font-size="${fontSize}" text-anchor="end" direction="rtl"`;
+    // Shadow
+    s += `<text x="${W - 100 + 2}" y="${baselineY + 3}" ${common} fill="${config.textShadow}">${escapeXml(line)}</text>`;
+    // Highlight
+    s += `<text x="${W - 100 - 1}" y="${baselineY - 1}" ${common} fill="${config.textHighlight}">${escapeXml(line)}</text>`;
+    // Main
+    s += `<text x="${W - 100}" y="${baselineY}" ${common} fill="${config.textColor}">${escapeXml(line)}</text>`;
+  }
+
+  // Bottom divider
+  s += buildDividerSVG(W/2, bottomDivider, config.bottomDividerWidth || 240, config.ornamentColor);
+
+  // Book
   if (bookName) {
-    ctx.fillStyle = '#e8d5a8';
-    ctx.font = `700 32px ${ARABIC_FONT_STACK}`;
-    ctx.fillText('📖 ﴿ ' + bookName + ' ﴾', W/2, H - 230, W - 200);
+    const bookText = '\u{1F4D6} \uFD3F ' + bookName + ' \uFD3E';
+    s += `<text x="${W/2}" y="${H - 220}" font-family="${FONT_FAMILY}" font-weight="700" font-size="34" fill="${config.bookColor}" text-anchor="middle" direction="rtl">${escapeXml(bookText)}</text>`;
   }
+  // Author
   if (authorName) {
-    ctx.fillStyle = '#c9a961';
-    ctx.font = `italic 400 26px ${ARABIC_FONT_STACK}`;
-    ctx.fillText('✍ ' + authorName, W/2, H - 180, W - 200);
-  }
-  drawWatermark(ctx, W, H, '#c9a961');
-}
-
-// ============== النمط 3: كلاسيكي ==============
-function drawClassic(ctx, W, H, text, bookName, authorName) {
-  const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#f7efdd'); bg.addColorStop(0.5, '#f2e6cd'); bg.addColorStop(1, '#e9d8b5');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-  const vg = ctx.createRadialGradient(W/2, H/2, W*0.35, W/2, H/2, W*0.85);
-  vg.addColorStop(0, 'rgba(255,248,232,0.45)'); vg.addColorStop(1, 'rgba(120,90,50,0.18)');
-  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
-
-  ctx.strokeStyle = '#b8945a'; ctx.lineWidth = 4;
-  ctx.strokeRect(40, 40, W - 80, H - 80);
-  ctx.strokeStyle = 'rgba(184,148,90,0.55)'; ctx.lineWidth = 1;
-  ctx.strokeRect(60, 60, W - 120, H - 120);
-
-  const cs = 110;
-  drawFlourishCorner(ctx, 60, 60, 1, 1, cs, '#b8945a');
-  drawFlourishCorner(ctx, W - 60, 60, -1, 1, cs, '#b8945a');
-  drawFlourishCorner(ctx, 60, H - 60, 1, -1, cs, '#b8945a');
-  drawFlourishCorner(ctx, W - 60, H - 60, -1, -1, cs, '#b8945a');
-
-  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(30, 58, 95, 0.85)';
-  ctx.font = 'bold 220px "Aref Ruqaa", Georgia, serif';
-  ctx.fillText('\u201C', 80, 0);
-
-  const len = text.length;
-  const fontSize = adaptiveFontSize(len, 68, 42);
-  const lineHeight = Math.round(fontSize * 1.7);
-  setArabicContext(ctx);
-  ctx.font = `700 ${fontSize}px ${ARABIC_FONT_STACK}`;
-  const maxWidth = W - 220;
-  const lines = wrapText(ctx, text, maxWidth);
-  const totalTextHeight = lines.length * lineHeight;
-
-  const { startY, topDivider, bottomDivider } = layoutTextBlock(H, totalTextHeight);
-
-  drawOrnamentLine(ctx, W/2, topDivider, 280, 'rgba(184,148,90,0.75)', true);
-
-  let y = startY;
-  for (const line of lines) {
-    fillText3D(ctx, line, W - 110, y, '#2a1f14', 'rgba(255,240,200,0.75)', 'rgba(0,0,0,0.28)', maxWidth);
-    y += lineHeight;
+    const authorText = '\u270D ' + authorName;
+    s += `<text x="${W/2}" y="${H - 175}" font-family="${FONT_FAMILY}" font-weight="400" font-style="italic" font-size="26" fill="${config.authorColor}" text-anchor="middle" direction="rtl">${escapeXml(authorText)}</text>`;
   }
 
-  drawOrnamentLine(ctx, W/2, bottomDivider, 220, 'rgba(184,148,90,0.55)', true);
-
-  setArabicContext(ctx);
-  ctx.textAlign = 'center';
-  if (bookName) {
-    ctx.fillStyle = '#5c4a2f';
-    ctx.font = `700 30px ${ARABIC_FONT_STACK}`;
-    ctx.fillText('📖 ﴿ ' + bookName + ' ﴾', W/2, H - 240, W - 200);
-  }
-  if (authorName) {
-    ctx.fillStyle = '#8a7a5f';
-    ctx.font = `italic 400 24px ${ARABIC_FONT_STACK}`;
-    ctx.fillText('✍ ' + authorName, W/2, H - 195, W - 200);
-  }
-
-  ctx.save(); ctx.globalAlpha = 0.09; ctx.fillStyle = '#5a3a10';
-  ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `bold 32px ${ARABIC_FONT_STACK}`;
-  const positions = [
-    { x: W * 0.25, y: H * 0.20, rot: -22 }, { x: W * 0.75, y: H * 0.38, rot: -22 },
-    { x: W * 0.28, y: H * 0.60, rot: -22 }, { x: W * 0.72, y: H * 0.80, rot: -22 },
+  // Watermark (4 positions, rotated)
+  const wmPositions = [
+    { x: W * 0.25, y: H * 0.20 },
+    { x: W * 0.75, y: H * 0.38 },
+    { x: W * 0.28, y: H * 0.60 },
+    { x: W * 0.72, y: H * 0.80 },
   ];
-  for (const p of positions) {
-    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180);
-    ctx.fillText('تصميم / sab3-77', 0, 0); ctx.restore();
+  for (const p of wmPositions) {
+    s += `<text transform="translate(${p.x.toFixed(0)} ${p.y.toFixed(0)}) rotate(-22)" font-family="${FONT_FAMILY}" font-weight="700" font-size="32" fill="${config.watermarkColor}" opacity="0.12" text-anchor="middle" direction="rtl">تصميم / sab3-77</text>`;
   }
-  ctx.restore();
+
+  s += `</svg>`;
+  return s;
 }
 
-// ============== النمط 4: حديث ==============
-function drawModern(ctx, W, H, text, bookName, authorName) {
-  ctx.fillStyle = '#fefefe'; ctx.fillRect(0, 0, W, H);
-  const accent = '#0f172a'; const accentColor = '#2b6cb0';
-
-  ctx.fillStyle = accent; ctx.fillRect(0, 0, 14, H);
-  ctx.fillStyle = accentColor; ctx.fillRect(14, 0, 6, H);
-
-  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillStyle = accent;
-  ctx.font = 'bold 260px -apple-system, system-ui, sans-serif';
-  ctx.fillText('\u201C', 50, -30);
-
-  const len = text.length;
-  const fontSize = adaptiveFontSize(len, 74, 46);
-  const lineHeight = Math.round(fontSize * 1.55);
-  setArabicContext(ctx);
-  ctx.font = `800 ${fontSize}px -apple-system, "SF Arabic", ${ARABIC_FONT_STACK}`;
-  const maxWidth = W - 200;
-  const lines = wrapText(ctx, text, maxWidth);
-  const totalTextHeight = lines.length * lineHeight;
-
-  const centerY = H / 2 - 40;
-  let y = centerY - totalTextHeight / 2;
-
-  for (const line of lines) {
-    ctx.fillStyle = accent;
-    ctx.fillText(line, W - 100, y, maxWidth);
-    y += lineHeight;
-  }
-
-  const lineY = Math.min(y + 70, H - 250);
-  ctx.strokeStyle = accent; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(80, lineY); ctx.lineTo(W - 100, lineY); ctx.stroke();
-  ctx.fillStyle = accentColor;
-  ctx.beginPath(); ctx.arc(W - 100, lineY, 8, 0, Math.PI * 2); ctx.fill();
-
-  setArabicContext(ctx);
-  ctx.textAlign = 'left';
-  if (bookName) {
-    ctx.fillStyle = accent;
-    ctx.font = `700 28px -apple-system, "SF Arabic", ${ARABIC_FONT_STACK}`;
-    ctx.fillText('📖 ' + bookName, 100, lineY + 30, W - 200);
-  }
-  if (authorName) {
-    ctx.fillStyle = '#64748b';
-    ctx.font = `400 22px -apple-system, "SF Arabic", ${ARABIC_FONT_STACK}`;
-    ctx.fillText('✍ ' + authorName, 100, lineY + 80, W - 200);
-  }
-  ctx.save(); ctx.globalAlpha = 0.07; ctx.fillStyle = '#0f172a';
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `bold 32px ${ARABIC_FONT_STACK}`;
-  const positions = [
-    { x: W * 0.25, y: H * 0.20, rot: -22 }, { x: W * 0.75, y: H * 0.38, rot: -22 },
-    { x: W * 0.28, y: H * 0.60, rot: -22 }, { x: W * 0.72, y: H * 0.80, rot: -22 },
-  ];
-  for (const p of positions) {
-    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot * Math.PI / 180);
-    ctx.fillText('sab3-77', 0, 0); ctx.restore();
-  }
-  ctx.restore();
-}
+// ============== إعدادات الأنماط ==============
+const STYLE_CONFIGS = {
+  naskh: {
+    bgColors: ['#0a1a30', '#0f2542', '#071224'],
+    vignette: ['rgba(70, 110, 170, 0.22)', 'rgba(0, 0, 0, 0.55)'],
+    frames: [
+      { color: '#c9a961', width: 5, inset: 38 },
+      { color: '#8a6d2f', width: 1.5, inset: 58 },
+      { color: 'rgba(201,169,97,0.5)', width: 1, inset: 66 },
+    ],
+    cornerColor: '#c9a961',
+    cornerSize: 130,
+    cornerInset: 66,
+    stars: true,
+    starsColor: '#c9a961',
+    textColor: '#e8d5a8',
+    textShadow: 'rgba(0,0,0,0.85)',
+    textHighlight: 'rgba(255,245,200,0.85)',
+    ornamentColor: '#c9a961',
+    quoteMarkColor: '#f5e6b8',
+    bookColor: '#f5e6b8',
+    authorColor: '#c9a961',
+    watermarkColor: '#e8d5a8',
+    topDividerWidth: 300,
+    bottomDividerWidth: 240,
+    fontBase: 74,
+    fontMin: 46,
+  },
+  oriental: {
+    bgColors: ['#14213d', '#1a2b4a', '#0d1b2f'],
+    vignette: ['rgba(60, 90, 150, 0.15)', 'rgba(0, 0, 0, 0.4)'],
+    frames: [
+      { color: 'rgba(201,169,97,0.9)', width: 3, inset: 50 },
+      { color: 'rgba(201,169,97,0.35)', width: 1, inset: 70 },
+    ],
+    cornerColor: 'rgba(201,169,97,0.85)',
+    cornerSize: 120,
+    cornerInset: 70,
+    patternColor: '#c9a961',
+    textColor: '#f5ecd9',
+    textShadow: 'rgba(0,0,0,0.55)',
+    textHighlight: 'rgba(255,255,255,0.35)',
+    ornamentColor: '#c9a961',
+    quoteMarkColor: 'rgba(201,169,97,0.9)',
+    bookColor: '#e8d5a8',
+    authorColor: '#c9a961',
+    watermarkColor: '#c9a961',
+    topDividerWidth: 300,
+    bottomDividerWidth: 220,
+    fontBase: 70,
+    fontMin: 42,
+  },
+  classic: {
+    bgColors: ['#f7efdd', '#f2e6cd', '#e9d8b5'],
+    vignette: ['rgba(255,248,232,0.45)', 'rgba(120,90,50,0.18)'],
+    frames: [
+      { color: '#b8945a', width: 4, inset: 40 },
+      { color: 'rgba(184,148,90,0.55)', width: 1, inset: 60 },
+    ],
+    cornerColor: '#b8945a',
+    cornerSize: 110,
+    cornerInset: 60,
+    textColor: '#2a1f14',
+    textShadow: 'rgba(0,0,0,0.28)',
+    textHighlight: 'rgba(255,240,200,0.75)',
+    ornamentColor: '#b8945a',
+    quoteMarkColor: 'rgba(30, 58, 95, 0.85)',
+    bookColor: '#5c4a2f',
+    authorColor: '#8a7a5f',
+    watermarkColor: '#5a3a10',
+    topDividerWidth: 280,
+    bottomDividerWidth: 220,
+    fontBase: 68,
+    fontMin: 42,
+  },
+  modern: {
+    bgColors: ['#fefefe', '#ffffff', '#ffffff'],
+    vignette: ['rgba(255,255,255,0)', 'rgba(255,255,255,0)'],
+    frames: [],
+    cornerColor: null,
+    textColor: '#0f172a',
+    textShadow: 'rgba(0,0,0,0.05)',
+    textHighlight: 'rgba(255,255,255,0.4)',
+    ornamentColor: '#0f172a',
+    quoteMarkColor: '#0f172a',
+    bookColor: '#0f172a',
+    authorColor: '#64748b',
+    watermarkColor: '#0f172a',
+    topDividerWidth: 0,
+    bottomDividerWidth: 0,
+    fontBase: 74,
+    fontMin: 46,
+    isModern: true,
+  },
+};
 
 // ============== توليد الصورة ==============
 async function generateQuoteImage(rawText, bookName, authorName, style) {
   await ensureFonts();
-  const text = stripPageNumbers(rawText);
+  const text = rawText.replace(/\s*\[صفحة\s*\d+\]\s*/g, ' ').replace(/\[\s*\]/g, ' ').replace(/\s+/g, ' ').trim();
   const W = 1080, H = 1350;
+  const config = STYLE_CONFIGS[style] || STYLE_CONFIGS.naskh;
+
+  // Wrapping
+  const fontSize = adaptiveFontSize(text.length, config.fontBase, config.fontMin);
+  const lineHeight = Math.round(fontSize * 1.75);
+  const maxTextWidth = W - 200;
+  const lines = wrapArabicText(text, maxTextWidth, fontSize);
+
+  // Layout
+  const totalH = lines.length * lineHeight;
+  const topDivider = config.isModern ? 100 : 245;
+  const bottomDivider = config.isModern ? H - 280 : H - 380;
+  const centerY = (topDivider + bottomDivider) / 2;
+  let startY = centerY - totalH / 2;
+  if (startY < topDivider + 40) startY = topDivider + 40;
+  if (startY + totalH > bottomDivider - 40) startY = bottomDivider - 40 - totalH;
+
+  // Build SVG
+  let svg;
+  if (config.isModern) {
+    // Modern minimal layout
+    svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+    svg += `<rect width="${W}" height="${H}" fill="#fefefe"/>`;
+    svg += `<rect x="0" y="0" width="14" height="${H}" fill="#0f172a"/>`;
+    svg += `<rect x="14" y="0" width="6" height="${H}" fill="#2b6cb0"/>`;
+    svg += `<text x="50" y="230" font-family="-apple-system, system-ui, sans-serif" font-weight="bold" font-size="260" fill="#0f172a" text-anchor="start">&#8220;</text>`;
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]; if (!line) continue;
+      const y = startY + i * Math.round(fontSize * 1.55) + fontSize * 0.85;
+      svg += `<text x="${W - 100}" y="${y}" font-family="-apple-system, 'SF Arabic', ${FONT_FAMILY}" font-weight="800" font-size="${fontSize}" fill="#0f172a" text-anchor="end" direction="rtl">${escapeXml(line)}</text>`;
+    }
+    const lineY = Math.min(startY + lines.length * Math.round(fontSize * 1.55) + 70, H - 250);
+    svg += `<line x1="80" y1="${lineY}" x2="${W - 100}" y2="${lineY}" stroke="#0f172a" stroke-width="3"/>`;
+    svg += `<circle cx="${W - 100}" cy="${lineY}" r="8" fill="#2b6cb0"/>`;
+    if (bookName) svg += `<text x="100" y="${lineY + 55}" font-family="-apple-system, ${FONT_FAMILY}" font-weight="700" font-size="28" fill="#0f172a" text-anchor="start" direction="rtl">📖 ${escapeXml(bookName)}</text>`;
+    if (authorName) svg += `<text x="100" y="${lineY + 100}" font-family="-apple-system, ${FONT_FAMILY}" font-size="22" fill="#64748b" text-anchor="start" direction="rtl">✍ ${escapeXml(authorName)}</text>`;
+    const wm = [{x:W*0.25,y:H*0.20},{x:W*0.75,y:H*0.38},{x:W*0.28,y:H*0.60},{x:W*0.72,y:H*0.80}];
+    for (const p of wm) {
+      svg += `<text transform="translate(${p.x.toFixed(0)} ${p.y.toFixed(0)}) rotate(-22)" font-family="-apple-system, system-ui" font-weight="700" font-size="32" fill="#0f172a" opacity="0.07" text-anchor="middle">sab3-77</text>`;
+    }
+    svg += `</svg>`;
+  } else {
+    svg = buildQuoteSVG({
+      W, H, lines, fontSize, lineHeight,
+      startY, topDivider, bottomDivider,
+      bookName, authorName, config
+    });
+  }
+
+  // Convert SVG to blob URL
+  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+
+  await new Promise((resolve, reject) => {
+    img.onload = resolve;
+    img.onerror = () => reject(new Error('فشل تحميل SVG'));
+    img.src = svgUrl;
+  });
+
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-
-  if (style === 'modern') drawModern(ctx, W, H, text, bookName, authorName);
-  else if (style === 'oriental') drawOriental(ctx, W, H, text, bookName, authorName);
-  else if (style === 'classic') drawClassic(ctx, W, H, text, bookName, authorName);
-  else drawNaskh(ctx, W, H, text, bookName, authorName);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, W, H);
+  ctx.drawImage(img, 0, 0, W, H);
+  URL.revokeObjectURL(svgUrl);
 
   return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
 }
@@ -786,6 +700,7 @@ async function showQuoteImage(text, style) {
   } catch (e) {
     setStatus('فشل توليد الصورة', 'err');
     toast('❌ ' + e.message);
+    showErr('image: ' + e.message);
   }
 }
 
@@ -854,7 +769,6 @@ function renderLibrary(filter) {
   });
 }
 
-// ============== عرض البطاقات ==============
 function renderQuotes() {
   const container = document.getElementById('quotes');
   container.innerHTML = '';
@@ -899,7 +813,6 @@ async function shareQuote(text) {
   else copyQuote(text);
 }
 
-// ============== الاستخراج ==============
 async function generate() {
   if (state.busy) return;
   const apiKey = document.getElementById('apiKey').value.trim();
@@ -931,22 +844,13 @@ async function generate() {
   }
 }
 
-// ============== الأحداث ==============
 function initApp() {
   try {
     loadLibrary(); loadApiKey();
-    // ✅ لا ننتظر الخطوط هنا لتفادي تعليق الواجهة
     ensureFonts().catch(() => {});
 
-    const pickBtn = document.getElementById('pickPdfBtn');
-    const pdfIn = document.getElementById('pdfInput');
-    const genBtn = document.getElementById('genBtn');
-    const countBtn = document.getElementById('countBtn');
-    const styleBtn = document.getElementById('styleBtn');
-    const libBtn = document.getElementById('libBtn');
-
-    pickBtn.addEventListener('click', () => pdfIn.click());
-    pdfIn.addEventListener('change', (e) => {
+    document.getElementById('pickPdfBtn').addEventListener('click', () => document.getElementById('pdfInput').click());
+    document.getElementById('pdfInput').addEventListener('change', (e) => {
       const f = e.target.files[0]; if (!f) return;
       state.pdfFile = f; state.pdfName = f.name;
       if (!document.getElementById('bookName').value) {
@@ -956,10 +860,9 @@ function initApp() {
       setStatus('✓ ' + f.name, 'ok');
       state.quotes = []; document.getElementById('quotes').innerHTML = '';
     });
+    document.getElementById('genBtn').addEventListener('click', generate);
 
-    genBtn.addEventListener('click', generate);
-
-    countBtn.addEventListener('click', function() {
+    document.getElementById('countBtn').addEventListener('click', function() {
       const opts = [5, 10, 15, 20];
       let idx = opts.indexOf(state.quoteCount);
       idx = (idx + 1) % opts.length;
@@ -967,7 +870,7 @@ function initApp() {
       this.textContent = '🔢 ' + state.quoteCount;
     });
 
-    styleBtn.addEventListener('click', function() {
+    document.getElementById('styleBtn').addEventListener('click', function() {
       const order = ['naskh', 'oriental', 'classic', 'modern'];
       let i = order.indexOf(state.imageStyle);
       i = (i + 1) % order.length;
@@ -977,7 +880,7 @@ function initApp() {
       toast('النمط: ' + STYLE_NAMES[state.imageStyle]);
     });
 
-    libBtn.addEventListener('click', openLibrary);
+    document.getElementById('libBtn').addEventListener('click', openLibrary);
     document.getElementById('filterAll').addEventListener('click', () => renderLibrary('all'));
     document.getElementById('filterFav').addEventListener('click', () => renderLibrary('fav'));
 
