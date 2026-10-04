@@ -7,6 +7,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="الاقتباسات">
 <title>مستخرج الاقتباسات الذكي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Aref+Ruqaa:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -21,19 +24,11 @@ body {
 .hidden { display: none !important; }
 h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700; }
 
-.field {
-  width: 100%; padding: 12px 14px; font-size: 14px;
-  border: 1px solid #cbd5e0; border-radius: 10px; background: #fff;
-  margin-bottom: 10px; font-family: inherit; direction: rtl;
-}
+.field { width: 100%; padding: 12px 14px; font-size: 14px; border: 1px solid #cbd5e0; border-radius: 10px; background: #fff; margin-bottom: 10px; font-family: inherit; direction: rtl; }
 .field:focus { outline: 2px solid #2b6cb0; border-color: transparent; }
 
 .row { display: flex; gap: 8px; margin-bottom: 10px; }
-.btn {
-  flex: 1; padding: 12px; font-size: 14px; font-weight: 700;
-  border: none; border-radius: 10px; color: #fff;
-  font-family: inherit; cursor: pointer; transition: transform 0.1s;
-}
+.btn { flex: 1; padding: 12px; font-size: 14px; font-weight: 700; border: none; border-radius: 10px; color: #fff; font-family: inherit; cursor: pointer; transition: transform 0.1s; }
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.5; }
 .btn-dark { background: #4a5568; }
@@ -70,16 +65,11 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .progress { background: #e2e8f0; border-radius: 8px; height: 6px; overflow: hidden; margin: 8px 0; }
 .progress-bar { background: #2b6cb0; height: 100%; width: 0; transition: width 0.3s; }
 
-.img-preview { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; flex-direction: column; gap: 16px; overflow-y: auto; }
-.img-preview img { max-width: 100%; max-height: 62vh; border-radius: 12px; }
+.img-preview { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 12px; flex-direction: column; gap: 12px; overflow-y: auto; }
+.img-preview img { max-width: 100%; max-height: 58vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
 .img-preview .btn { max-width: 200px; }
 .style-picker { display: flex; gap: 6px; max-width: 100%; flex-wrap: wrap; justify-content: center; }
-.style-chip {
-  padding: 8px 14px; border-radius: 20px; font-size: 12px;
-  border: 2px solid rgba(255,255,255,0.3);
-  background: rgba(255,255,255,0.1); color: #fff;
-  cursor: pointer; font-family: inherit;
-}
+.style-chip { padding: 8px 12px; border-radius: 20px; font-size: 11px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-family: inherit; }
 .style-chip.active { background: #b8945a; border-color: #b8945a; font-weight: 700; }
 </style>
 </head>
@@ -87,24 +77,17 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 
 <div id="main">
   <h1>✨ استخراج اقتباسات ذكي</h1>
-
   <input id="apiKey" class="field" type="password" placeholder="مفتاح OpenRouter (sk-or-v1-...)">
   <input id="bookName" class="field" type="text" placeholder="اسم الكتاب (اختياري)">
   <input id="authorName" class="field" type="text" placeholder="اسم المؤلف (اختياري)">
-
-  <button id="pickPdfBtn" class="btn btn-dark" style="width:100%; margin-bottom:10px;">
-    📕 اختيار ملف PDF
-  </button>
+  <button id="pickPdfBtn" class="btn btn-dark" style="width:100%; margin-bottom:10px;">📕 اختيار ملف PDF</button>
   <input id="pdfInput" type="file" accept=".pdf" style="display:none;">
-
   <div class="row">
     <button id="countBtn" class="btn btn-gray">🔢 10</button>
-    <button id="styleBtn" class="btn btn-gold">🎨 كلاسيكي</button>
+    <button id="styleBtn" class="btn btn-gold">🎨 نسخي</button>
     <button id="libBtn" class="btn btn-purple">📚 المكتبة</button>
   </div>
-
   <button id="genBtn" class="btn btn-blue" style="width:100%;">استخراج ✨</button>
-
   <div id="status" class="status">ارفع ملف PDF للبدء</div>
   <div id="progressWrap" class="progress hidden"><div id="progressBar" class="progress-bar"></div></div>
   <div id="quotes" class="quotes"></div>
@@ -125,9 +108,10 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 
 <div id="imgPreview" class="img-preview hidden">
   <div class="style-picker">
-    <button class="style-chip active" data-style="classic">🏛️ كلاسيكي فاخر</button>
-    <button class="style-chip" data-style="modern">⚡ حديث بسيط</button>
-    <button class="style-chip" data-style="oriental">🌙 شرقي مزخرف</button>
+    <button class="style-chip" data-style="naskh">📜 نسخي فاخر</button>
+    <button class="style-chip" data-style="oriental">🌙 شرقي</button>
+    <button class="style-chip" data-style="classic">🏛️ كلاسيكي</button>
+    <button class="style-chip" data-style="modern">⚡ حديث</button>
   </div>
   <img id="previewImg" alt="preview">
   <div class="row" style="width:100%;max-width:400px;">
@@ -149,52 +133,45 @@ const STYLE_STORAGE = 'quotes_style';
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-const STYLE_NAMES = { classic: '🏛️ كلاسيكي', modern: '⚡ حديث', oriental: '🌙 شرقي' };
+const STYLE_NAMES = {
+  naskh: '📜 نسخي فاخر',
+  oriental: '🌙 شرقي',
+  classic: '🏛️ كلاسيكي',
+  modern: '⚡ حديث',
+};
 
 let state = {
   pdfFile: null, pdfText: '', pdfName: '', authorName: '',
   quotes: [], quoteCount: 10, library: [], currentHeader: '',
-  busy: false, imageStyle: 'classic',
+  busy: false, imageStyle: 'naskh',
   currentImageText: '', currentImageBlob: null,
 };
 
-function loadLibrary() {
+let fontsReady = false;
+async function ensureFonts() {
+  if (fontsReady) return;
   try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    state.library = data ? JSON.parse(data) : [];
-  } catch (e) { state.library = []; }
+    await Promise.all([
+      document.fonts.load('700 68px Amiri'),
+      document.fonts.load('400 68px Amiri'),
+      document.fonts.load('700 68px "Aref Ruqaa"'),
+      document.fonts.load('700 68px "Scheherazade New"'),
+    ]);
+    fontsReady = true;
+  } catch (e) { console.warn('font load', e); }
 }
-function saveLibrary() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.library)); } catch (e) {}
-}
-function toast(msg, ms) {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
-  clearTimeout(el._t);
-  el._t = setTimeout(() => el.classList.remove('show'), ms || 2200);
-}
-function setStatus(text, cls) {
-  const el = document.getElementById('status');
-  el.textContent = text;
-  el.className = 'status' + (cls ? ' ' + cls : '');
-}
-function showProgress(show, percent) {
-  const wrap = document.getElementById('progressWrap');
-  const bar = document.getElementById('progressBar');
-  wrap.classList.toggle('hidden', !show);
-  if (percent !== undefined) bar.style.width = percent + '%';
-}
+
+function loadLibrary() { try { const d = localStorage.getItem(STORAGE_KEY); state.library = d ? JSON.parse(d) : []; } catch (e) { state.library = []; } }
+function saveLibrary() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.library)); } catch (e) {} }
+function toast(msg, ms) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), ms || 2200); }
+function setStatus(t, c) { const el = document.getElementById('status'); el.textContent = t; el.className = 'status' + (c ? ' ' + c : ''); }
+function showProgress(s, p) { const w = document.getElementById('progressWrap'); const b = document.getElementById('progressBar'); w.classList.toggle('hidden', !s); if (p !== undefined) b.style.width = p + '%'; }
 function loadApiKey() {
   try {
-    const k = localStorage.getItem(API_KEY_STORAGE);
-    if (k) document.getElementById('apiKey').value = k;
-    const a = localStorage.getItem(AUTHOR_STORAGE);
-    if (a) { document.getElementById('authorName').value = a; state.authorName = a; }
+    const k = localStorage.getItem(API_KEY_STORAGE); if (k) document.getElementById('apiKey').value = k;
+    const a = localStorage.getItem(AUTHOR_STORAGE); if (a) { document.getElementById('authorName').value = a; state.authorName = a; }
     const s = localStorage.getItem(STYLE_STORAGE);
-    if (s && STYLE_NAMES[s]) {
-      state.imageStyle = s;
-      document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[s].split(' ').slice(1).join(' ');
-    }
+    if (s && STYLE_NAMES[s]) { state.imageStyle = s; document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[s].split(' ').slice(1).join(' '); }
   } catch (e) {}
 }
 function saveApiKey(k) { try { localStorage.setItem(API_KEY_STORAGE, k); } catch (e) {} }
@@ -235,14 +212,13 @@ function cleanOutputText(text) {
   text = text.replace(/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]+/g, '');
   text = text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
   const lines = text.split('\n');
-  const filtered = [];
+  const out = [];
   for (const line of lines) {
     const s = line.trim();
-    if (!s) { filtered.push(''); continue; }
-    if (/[\u0600-\u06FF]/.test(s) || /^\[?صفحة|^\d+\s*[\-\.\]\)]|^\d+$/.test(s))
-      filtered.push(line);
+    if (!s) { out.push(''); continue; }
+    if (/[\u0600-\u06FF]/.test(s) || /^\[?صفحة|^\d+\s*[\-\.\]\)]|^\d+$/.test(s)) out.push(line);
   }
-  return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function parseQuotes(text) {
@@ -251,8 +227,7 @@ function parseQuotes(text) {
   const parts = ('\n' + text).split(/\n(?=\s*\d+\s*[\.\-–—\)])/);
   const quotes = [];
   for (let p of parts) {
-    p = p.trim();
-    if (!p) continue;
+    p = p.trim(); if (!p) continue;
     p = p.replace(/^\s*\d+\s*[\.\-–—\)]\s*/, '');
     if (p && p.length > 20) quotes.push(p);
   }
@@ -269,18 +244,13 @@ function truncateAtLine(text, maxChars) {
   return text.substring(0, cut > 0 ? cut : maxChars);
 }
 
-const MODELS = [
-  'openai/gpt-oss-120b',
-  'google/gemini-2.5-flash',
-  'meta-llama/llama-3.3-70b-instruct',
-];
+const MODELS = ['openai/gpt-oss-120b', 'google/gemini-2.5-flash', 'meta-llama/llama-3.3-70b-instruct'];
 
 async function callOpenRouter(apiKey, bookName, bookText, count) {
   const seed = Math.floor(Math.random() * 9000) + 1000;
-  const prompt =
-`أنت مساعد متخصص في استخراج الاقتباسات الحرفية من الكتب العربية.
+  const prompt = `أنت مساعد متخصص في استخراج الاقتباسات الحرفية من الكتب العربية.
 
-تحذيرات مهمة جداً:
+تحذيرات مهمة:
 - النص المرفق قد يحتوي على رموز غريبة أو أحرف صينية أو unk.
 - تجاهل تماماً أي محتوى غير عربي.
 - اكتب بالعربية الفصحى فقط.
@@ -293,9 +263,9 @@ async function callOpenRouter(apiKey, bookName, bookText, count) {
 تعليمات الإخراج الصارمة:
 1. ابدأ القائمة مباشرة بالاقتباس الأول.
 2. عربي فقط.
-3. طابق النص حرفياً بدون اختلاق.
+3. طابق النص حرفياً.
 4. رقّم من 1 إلى ${count}.
-5. اذكر رقم الصفحة بعد كل اقتباس بصيغة [صفحة X].
+5. اذكر رقم الصفحة بصيغة [صفحة X].
 
 نص الكتاب:
 ${bookText}`;
@@ -305,23 +275,13 @@ ${bookText}`;
     try {
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + apiKey,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': location.origin,
-          'X-Title': 'Arabic Quotes Extractor'
-        },
-        body: JSON.stringify({
-          model, messages: [{ role: 'user', content: prompt }],
-          temperature: 0.85, max_tokens: 2500,
-        }),
+        headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin, 'X-Title': 'Arabic Quotes Extractor' },
+        body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.85, max_tokens: 2500 }),
       });
       if (res.status === 200) {
         const data = await res.json();
         let answer = cleanOutputText(data.choices?.[0]?.message?.content || '');
-        if ((answer.match(/[\u0600-\u06FF]/g) || []).length < 50) {
-          errors.push(`${model}: غير عربية`); continue;
-        }
+        if ((answer.match(/[\u0600-\u06FF]/g) || []).length < 50) { errors.push(`${model}: غير عربية`); continue; }
         return { text: answer, model };
       }
       const errData = await res.json().catch(() => ({}));
@@ -346,9 +306,8 @@ function wrapText(ctx, text, maxWidth) {
     let current = '';
     for (const word of words) {
       const test = current ? current + ' ' + word : word;
-      if (ctx.measureText(test).width > maxWidth && current) {
-        lines.push(current); current = word;
-      } else current = test;
+      if (ctx.measureText(test).width > maxWidth && current) { lines.push(current); current = word; }
+      else current = test;
     }
     if (current) lines.push(current);
   }
@@ -372,6 +331,96 @@ function drawDiamond(ctx, cx, cy, size, color) {
   ctx.closePath(); ctx.fill(); ctx.restore();
 }
 
+// رسم خط منقوش بأسلوب زخرفي بين نقطتين
+function drawOrnamentalLine(ctx, x1, y1, x2, y2, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(x1, y1); ctx.lineTo(x2, y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+// زخرفة زاوية على شكل حلزوني (مستوحى من صورة الأرابيسك)
+function drawFlourishCorner(ctx, cx, cy, dirX, dirY, size, color) {
+  ctx.save();
+  ctx.strokeStyle = color;
+  ctx.fillStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  const L = size;
+
+  // 1) الخط الأفقي الرئيسي
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx + L * dirX, cy);
+  ctx.stroke();
+
+  // 2) الخط العمودي الرئيسي
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);
+  ctx.lineTo(cx, cy + L * dirY);
+  ctx.stroke();
+
+  // 3) نقاط صغيرة في نهاية كل خط
+  ctx.beginPath(); ctx.arc(cx + L * dirX, cy, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx, cy + L * dirY, 3, 0, Math.PI * 2); ctx.fill();
+
+  // 4) حلزون صغير عند بداية الخط الأفقي
+  ctx.beginPath();
+  ctx.moveTo(cx + 40 * dirX, cy);
+  ctx.bezierCurveTo(
+    cx + 70 * dirX, cy + 25 * dirY,
+    cx + 100 * dirX, cy + 10 * dirY,
+    cx + 85 * dirX, cy + 35 * dirY
+  );
+  ctx.stroke();
+
+  // 5) ورقة صغيرة
+  ctx.beginPath();
+  ctx.moveTo(cx + 55 * dirX, cy + 5 * dirY);
+  ctx.quadraticCurveTo(
+    cx + 75 * dirX, cy - 15 * dirY,
+    cx + 90 * dirX, cy + 5 * dirY
+  );
+  ctx.quadraticCurveTo(
+    cx + 75 * dirX, cy + 15 * dirY,
+    cx + 55 * dirX, cy + 5 * dirY
+  );
+  ctx.closePath();
+  ctx.fill();
+
+  // 6) حلزون صغير عند بداية الخط العمودي
+  ctx.beginPath();
+  ctx.moveTo(cx, cy + 40 * dirY);
+  ctx.bezierCurveTo(
+    cx + 25 * dirX, cy + 70 * dirY,
+    cx + 10 * dirX, cy + 100 * dirY,
+    cx + 35 * dirX, cy + 85 * dirY
+  );
+  ctx.stroke();
+
+  // 7) ورقة صغيرة عمودية
+  ctx.beginPath();
+  ctx.moveTo(cx + 5 * dirX, cy + 55 * dirY);
+  ctx.quadraticCurveTo(
+    cx - 15 * dirX, cy + 75 * dirY,
+    cx + 5 * dirX, cy + 90 * dirY
+  );
+  ctx.quadraticCurveTo(
+    cx + 15 * dirX, cy + 75 * dirY,
+    cx + 5 * dirX, cy + 55 * dirY
+  );
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// فاصل زخرفي على شكل خط + معين
 function drawOrnamentLine(ctx, cx, y, width, color, withDiamond) {
   const half = width / 2;
   ctx.save();
@@ -384,84 +433,95 @@ function drawOrnamentLine(ctx, cx, y, width, color, withDiamond) {
   ctx.restore();
 }
 
-// زخرفة إسلامية: نجمة ثمانية
-function drawKhatim(ctx, cx, cy, size) {
+// نص ثلاثي الأبعاد: ظل + إبراز + حافة
+function fillText3D(ctx, text, x, y, color, highlight, shadow) {
   ctx.save();
-  ctx.translate(cx, cy);
-  ctx.beginPath();
-  ctx.moveTo(-size, -size); ctx.lineTo(size, -size);
-  ctx.lineTo(size, size); ctx.lineTo(-size, size); ctx.closePath();
-  ctx.stroke();
-  ctx.rotate(Math.PI / 4);
-  ctx.beginPath();
-  ctx.moveTo(-size, -size); ctx.lineTo(size, -size);
-  ctx.lineTo(size, size); ctx.lineTo(-size, size); ctx.closePath();
-  ctx.stroke();
+  // ظل خفيف أسفل-يمين
+  ctx.fillStyle = shadow;
+  ctx.fillText(text, x + 2, y + 3);
+  // إبراز خفيف أعلى-يسار
+  ctx.fillStyle = highlight;
+  ctx.fillText(text, x - 1, y - 1);
+  // النص الأساسي
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
   ctx.restore();
 }
 
-function drawIslamicPattern(ctx, W, H, color, alpha) {
-  ctx.save();
-  ctx.globalAlpha = alpha;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 1.2;
-  const spacing = 90;
-  for (let y = -spacing; y < H + spacing; y += spacing) {
-    for (let x = -spacing; x < W + spacing; x += spacing) {
-      drawKhatim(ctx, x, y, 26);
-      drawKhatim(ctx, x + spacing/2, y + spacing/2, 26);
-    }
-  }
-  ctx.restore();
-}
-
-// ============== النمط 1: كلاسيكي فاخر ==============
-function drawClassic(ctx, W, H, text, bookName, authorName) {
-  // خلفية بتدرج بيج-ذهبي
+// ============== النمط 1: نسخي فاخر (جديد) ==============
+function drawNaskh(ctx, W, H, text, bookName, authorName) {
+  // خلفية كريمية بملمس ورقي ناعم
   const bg = ctx.createLinearGradient(0, 0, W, H);
-  bg.addColorStop(0, '#f7efdd');
-  bg.addColorStop(0.5, '#f2e6cd');
-  bg.addColorStop(1, '#e9d8b5');
+  bg.addColorStop(0, '#f5ecd6');
+  bg.addColorStop(0.5, '#efe3c8');
+  bg.addColorStop(1, '#e8d9b6');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
 
-  // Vignette بني خفيف
-  const vg = ctx.createRadialGradient(W/2, H/2, W*0.35, W/2, H/2, W*0.85);
-  vg.addColorStop(0, 'rgba(255,248,232,0.45)');
-  vg.addColorStop(1, 'rgba(120,90,50,0.18)');
+  // حبيبات ناعمة (ملمس ورقي)
+  ctx.save();
+  ctx.globalAlpha = 0.035;
+  for (let i = 0; i < 4000; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    ctx.fillStyle = Math.random() > 0.5 ? '#8a6a30' : '#3a2a10';
+    ctx.fillRect(x, y, 1, 1);
+  }
+  ctx.restore();
+
+  // Vignette خفيف
+  const vg = ctx.createRadialGradient(W/2, H/2, W*0.3, W/2, H/2, W*0.85);
+  vg.addColorStop(0, 'rgba(255,250,235,0.35)');
+  vg.addColorStop(1, 'rgba(90,60,20,0.22)');
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
-  // إطار خارجي ذهبي
-  ctx.strokeStyle = '#b8945a'; ctx.lineWidth = 4;
-  ctx.strokeRect(40, 40, W - 80, H - 80);
-
-  // إطار داخلي رقيق
-  ctx.strokeStyle = 'rgba(184,148,90,0.55)'; ctx.lineWidth = 1;
-  ctx.strokeRect(60, 60, W - 120, H - 120);
-
-  // معينات الزوايا
+  const greenDark = '#0d4a3d';
   const gold = '#b8945a';
-  drawDiamond(ctx, 60, 60, 6, gold);
-  drawDiamond(ctx, W-60, 60, 6, gold);
-  drawDiamond(ctx, 60, H-60, 6, gold);
-  drawDiamond(ctx, W-60, H-60, 6, gold);
+  const goldLight = '#d4b478';
+  const textColor = '#1f1a12';
+  const textHighlight = 'rgba(255,245,215,0.85)';
+  const textShadow = 'rgba(0,0,0,0.32)';
 
-  // علامة الاقتباس - ذهبية كبيرة
+  // إطار خارجي سميك بلون أخضر داكن
+  ctx.strokeStyle = greenDark;
+  ctx.lineWidth = 5;
+  ctx.strokeRect(38, 38, W - 76, H - 76);
+
+  // إطار ذهبي داخلي
+  ctx.strokeStyle = gold;
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(58, 58, W - 116, H - 116);
+
+  // خط رقيق إضافي
+  ctx.strokeStyle = 'rgba(184,148,90,0.4)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(66, 66, W - 132, H - 132);
+
+  // زخارف 4 زوايا
+  const cs = 130;
+  drawFlourishCorner(ctx, 66, 66, 1, 1, cs, greenDark);
+  drawFlourishCorner(ctx, W - 66, 66, -1, 1, cs, greenDark);
+  drawFlourishCorner(ctx, 66, H - 66, 1, -1, cs, greenDark);
+  drawFlourishCorner(ctx, W - 66, H - 66, -1, -1, cs, greenDark);
+
+  // علامة الاقتباس مذهّبة
   ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(30, 58, 95, 0.85)';
-  ctx.font = 'bold 220px Georgia, "Times New Roman", serif';
-  ctx.fillText('\u201C', 80, 0);
+  ctx.fillStyle = goldLight;
+  ctx.strokeStyle = greenDark;
+  ctx.lineWidth = 2;
+  ctx.font = 'bold 200px "Aref Ruqaa", Georgia, serif';
+  ctx.fillText('\u201C', 90, 15);
+  ctx.strokeText('\u201C', 90, 15);
 
-  // فاصل زخرفي أعلى
-  drawOrnamentLine(ctx, W/2, 250, 280, 'rgba(184,148,90,0.75)', true);
+  // فاصل أعلى
+  drawOrnamentLine(ctx, W/2, 245, 300, gold, true);
 
-  // النص
+  // النص بخط Amiri النسخي
   const len = text.length;
-  const fontSize = adaptiveFontSize(len, 68, 42);
-  const lineHeight = Math.round(fontSize * 1.65);
+  const fontSize = adaptiveFontSize(len, 72, 44);
+  const lineHeight = Math.round(fontSize * 1.75);
   ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.fillStyle = '#2a1f14';
-  ctx.font = `bold ${fontSize}px Georgia, "SF Arabic", "Times New Roman", serif`;
-  const maxWidth = W - 220;
+  ctx.font = `700 ${fontSize}px Amiri, "Scheherazade New", Georgia, serif`;
+  const maxWidth = W - 200;
   const lines = wrapText(ctx, text, maxWidth);
 
   const topY = 330;
@@ -469,30 +529,199 @@ function drawClassic(ctx, W, H, text, bookName, authorName) {
   const totalH = lines.length * lineHeight;
   let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
 
+  // نص ثلاثي الأبعاد
   for (const line of lines) {
     if (y + lineHeight > bottomY + lineHeight) break;
-    ctx.fillText(line, W - 110, y);
+    fillText3D(ctx, line, W - 100, y, textColor, textHighlight, textShadow);
     y += lineHeight;
   }
 
-  // فاصل زخرفي أسفل
-  const dividerY = Math.min(y + 50, H - 300);
-  drawOrnamentLine(ctx, W/2, dividerY, 220, 'rgba(184,148,90,0.55)', true);
+  // فاصل أسفل
+  const dividerY = Math.min(y + 50, H - 305);
+  drawOrnamentLine(ctx, W/2, dividerY, 240, gold, true);
 
   // الكتاب والمؤلف
   ctx.textAlign = 'center'; ctx.direction = 'rtl';
+  ctx.textBaseline = 'top';
+  if (bookName) {
+    ctx.font = 'bold 32px Amiri, "Scheherazade New", Georgia, serif';
+    ctx.fillStyle = greenDark;
+    // 3D خفيف
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillText('﴾ ' + bookName + ' ﴿', W/2 + 1, H - 235 + 2);
+    ctx.fillStyle = greenDark;
+    ctx.fillText('﴾ ' + bookName + ' ﴿', W/2, H - 235);
+    ctx.restore();
+  }
+  if (authorName) {
+    ctx.font = 'italic 26px Amiri, "Scheherazade New", Georgia, serif';
+    ctx.fillStyle = gold;
+    ctx.fillText('✍ ' + authorName, W/2, H - 185);
+  }
+
+  // توقيع في زاوية واحدة
+  ctx.save();
+  ctx.globalAlpha = 0.4;
+  ctx.fillStyle = greenDark;
+  ctx.font = '18px Amiri, Georgia, serif';
+  ctx.textAlign = 'right'; ctx.direction = 'ltr';
+  ctx.fillText('sab3-77', W - 85, H - 85);
+  ctx.restore();
+}
+
+// ============== النمط 2: شرقي (محسّن بخط أميري) ==============
+function drawOriental(ctx, W, H, text, bookName, authorName) {
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#14213d');
+  bg.addColorStop(0.5, '#1a2b4a');
+  bg.addColorStop(1, '#0d1b2f');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // زخرفة إسلامية ذهبية
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.strokeStyle = '#c9a961';
+  ctx.lineWidth = 1.2;
+  const spacing = 90;
+  for (let yy = -spacing; yy < H + spacing; yy += spacing) {
+    for (let xx = -spacing; xx < W + spacing; xx += spacing) {
+      // نجمة ثمانية
+      ctx.save(); ctx.translate(xx, yy); ctx.strokeRect(-26, -26, 52, 52);
+      ctx.rotate(Math.PI/4); ctx.strokeRect(-26, -26, 52, 52); ctx.restore();
+      ctx.save(); ctx.translate(xx + spacing/2, yy + spacing/2); ctx.strokeRect(-26, -26, 52, 52);
+      ctx.rotate(Math.PI/4); ctx.strokeRect(-26, -26, 52, 52); ctx.restore();
+    }
+  }
+  ctx.restore();
+
+  // إطار ذهبي
+  ctx.strokeStyle = 'rgba(201,169,97,0.9)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(50, 50, W - 100, H - 100);
+  ctx.strokeStyle = 'rgba(201,169,97,0.35)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(70, 70, W - 140, H - 140);
+
+  // زخارف الزوايا بنفس الأسلوب
+  const cs = 120;
+  drawFlourishCorner(ctx, 70, 70, 1, 1, cs, 'rgba(201,169,97,0.85)');
+  drawFlourishCorner(ctx, W - 70, 70, -1, 1, cs, 'rgba(201,169,97,0.85)');
+  drawFlourishCorner(ctx, 70, H - 70, 1, -1, cs, 'rgba(201,169,97,0.85)');
+  drawFlourishCorner(ctx, W - 70, H - 70, -1, -1, cs, 'rgba(201,169,97,0.85)');
+
+  // علامة الاقتباس
+  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(201,169,97,0.9)';
+  ctx.font = 'bold 220px "Aref Ruqaa", Georgia, serif';
+  ctx.fillText('\u201C', 80, 10);
+
+  drawOrnamentLine(ctx, W/2, 250, 300, 'rgba(201,169,97,0.75)', true);
+
+  // النص بخط أميري
+  const len = text.length;
+  const fontSize = adaptiveFontSize(len, 70, 42);
+  const lineHeight = Math.round(fontSize * 1.75);
+  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.font = `700 ${fontSize}px Amiri, "Scheherazade New", Georgia, serif`;
+
+  const maxWidth = W - 220;
+  const lines = wrapText(ctx, text, maxWidth);
+
+  const topY = 330, bottomY = H - 340;
+  const totalH = lines.length * lineHeight;
+  let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
+
+  // 3D ذهبي على كحلي
+  for (const line of lines) {
+    if (y + lineHeight > bottomY + lineHeight) break;
+    fillText3D(ctx, line, W - 110, y, '#f5ecd9', 'rgba(255,255,255,0.35)', 'rgba(0,0,0,0.55)');
+    y += lineHeight;
+  }
+
+  const dividerY = Math.min(y + 50, H - 305);
+  drawOrnamentLine(ctx, W/2, dividerY, 220, 'rgba(201,169,97,0.6)', true);
+
+  ctx.textAlign = 'center'; ctx.direction = 'rtl'; ctx.textBaseline = 'top';
+  if (bookName) {
+    ctx.fillStyle = '#e8d5a8';
+    ctx.font = 'bold 32px Amiri, "Scheherazade New", serif';
+    ctx.fillText('﴾ ' + bookName + ' ﴿', W/2, H - 230);
+  }
+  if (authorName) {
+    ctx.fillStyle = '#c9a961';
+    ctx.font = 'italic 26px Amiri, "Scheherazade New", serif';
+    ctx.fillText('✍ ' + authorName, W/2, H - 180);
+  }
+  ctx.save();
+  ctx.globalAlpha = 0.5;
+  ctx.fillStyle = '#c9a961';
+  ctx.font = '18px Georgia, serif';
+  ctx.textAlign = 'right'; ctx.direction = 'ltr';
+  ctx.fillText('sab3-77', W - 80, H - 80);
+  ctx.restore();
+}
+
+// ============== النمط 3: كلاسيكي ==============
+function drawClassic(ctx, W, H, text, bookName, authorName) {
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#f7efdd'); bg.addColorStop(0.5, '#f2e6cd'); bg.addColorStop(1, '#e9d8b5');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  const vg = ctx.createRadialGradient(W/2, H/2, W*0.35, W/2, H/2, W*0.85);
+  vg.addColorStop(0, 'rgba(255,248,232,0.45)'); vg.addColorStop(1, 'rgba(120,90,50,0.18)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+  ctx.strokeStyle = '#b8945a'; ctx.lineWidth = 4;
+  ctx.strokeRect(40, 40, W - 80, H - 80);
+  ctx.strokeStyle = 'rgba(184,148,90,0.55)'; ctx.lineWidth = 1;
+  ctx.strokeRect(60, 60, W - 120, H - 120);
+
+  const cs = 110;
+  drawFlourishCorner(ctx, 60, 60, 1, 1, cs, '#b8945a');
+  drawFlourishCorner(ctx, W - 60, 60, -1, 1, cs, '#b8945a');
+  drawFlourishCorner(ctx, 60, H - 60, 1, -1, cs, '#b8945a');
+  drawFlourishCorner(ctx, W - 60, H - 60, -1, -1, cs, '#b8945a');
+
+  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(30, 58, 95, 0.85)';
+  ctx.font = 'bold 220px "Aref Ruqaa", Georgia, serif';
+  ctx.fillText('\u201C', 80, 0);
+
+  drawOrnamentLine(ctx, W/2, 250, 280, 'rgba(184,148,90,0.75)', true);
+
+  const len = text.length;
+  const fontSize = adaptiveFontSize(len, 68, 42);
+  const lineHeight = Math.round(fontSize * 1.7);
+  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.font = `700 ${fontSize}px Amiri, Georgia, serif`;
+  const maxWidth = W - 220;
+  const lines = wrapText(ctx, text, maxWidth);
+
+  const topY = 330, bottomY = H - 340;
+  const totalH = lines.length * lineHeight;
+  let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
+
+  for (const line of lines) {
+    if (y + lineHeight > bottomY + lineHeight) break;
+    fillText3D(ctx, line, W - 110, y, '#2a1f14', 'rgba(255,240,200,0.75)', 'rgba(0,0,0,0.28)');
+    y += lineHeight;
+  }
+
+  const dividerY = Math.min(y + 50, H - 300);
+  drawOrnamentLine(ctx, W/2, dividerY, 220, 'rgba(184,148,90,0.55)', true);
+
+  ctx.textAlign = 'center'; ctx.direction = 'rtl'; ctx.textBaseline = 'top';
   if (bookName) {
     ctx.fillStyle = '#5c4a2f';
-    ctx.font = 'bold 30px Georgia, "SF Arabic", serif';
-    ctx.fillText('📖 ' + bookName, W/2, H - 240);
+    ctx.font = 'bold 30px Amiri, Georgia, serif';
+    ctx.fillText('﴾ ' + bookName + ' ﴿', W/2, H - 240);
   }
   if (authorName) {
     ctx.fillStyle = '#8a7a5f';
-    ctx.font = 'italic 24px Georgia, "SF Arabic", serif';
+    ctx.font = 'italic 24px Amiri, Georgia, serif';
     ctx.fillText('✍ ' + authorName, W/2, H - 195);
   }
-
-  // توقيع زاوية واحدة (بدل watermark مكرر)
   ctx.save();
   ctx.globalAlpha = 0.35;
   ctx.fillStyle = '#b8945a';
@@ -502,62 +731,46 @@ function drawClassic(ctx, W, H, text, bookName, authorName) {
   ctx.restore();
 }
 
-// ============== النمط 2: حديث بسيط ==============
+// ============== النمط 4: حديث ==============
 function drawModern(ctx, W, H, text, bookName, authorName) {
-  // خلفية بيضاء نقية
   ctx.fillStyle = '#fefefe'; ctx.fillRect(0, 0, W, H);
-
   const accent = '#0f172a';
   const accentColor = '#2b6cb0';
 
-  // شريط جانبي رفيع (يسار)
-  ctx.fillStyle = accent;
-  ctx.fillRect(0, 0, 14, H);
+  ctx.fillStyle = accent; ctx.fillRect(0, 0, 14, H);
+  ctx.fillStyle = accentColor; ctx.fillRect(14, 0, 6, H);
 
-  // شريط ثانوي
-  ctx.fillStyle = accentColor;
-  ctx.fillRect(14, 0, 6, H);
-
-  // علامة اقتباس حديثة
   ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillStyle = accent;
   ctx.font = 'bold 260px -apple-system, system-ui, sans-serif';
   ctx.fillText('\u201C', 50, -30);
 
-  // النص
   const len = text.length;
   const fontSize = adaptiveFontSize(len, 74, 46);
   const lineHeight = Math.round(fontSize * 1.55);
   ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.fillStyle = accent;
   ctx.font = `800 ${fontSize}px -apple-system, "SF Arabic", system-ui, sans-serif`;
   const maxWidth = W - 200;
   const lines = wrapText(ctx, text, maxWidth);
 
-  const topY = 320;
-  const bottomY = H - 300;
+  const topY = 320, bottomY = H - 300;
   const totalH = lines.length * lineHeight;
   let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
 
   for (const line of lines) {
     if (y + lineHeight > bottomY + lineHeight) break;
+    ctx.fillStyle = accent;
     ctx.fillText(line, W - 100, y);
     y += lineHeight;
   }
 
-  // خط أفقي فاصل
   const lineY = Math.min(y + 70, H - 250);
   ctx.strokeStyle = accent; ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(80, lineY); ctx.lineTo(W - 100, lineY);
-  ctx.stroke();
-
-  // نقطة ملونة على بداية الخط
+  ctx.beginPath(); ctx.moveTo(80, lineY); ctx.lineTo(W - 100, lineY); ctx.stroke();
   ctx.fillStyle = accentColor;
   ctx.beginPath(); ctx.arc(W - 100, lineY, 8, 0, Math.PI * 2); ctx.fill();
 
-  // الكتاب والمؤلف
-  ctx.textAlign = 'left'; ctx.direction = 'rtl';
+  ctx.textAlign = 'left'; ctx.direction = 'rtl'; ctx.textBaseline = 'top';
   if (bookName) {
     ctx.fillStyle = accent;
     ctx.font = 'bold 28px -apple-system, "SF Arabic", system-ui, sans-serif';
@@ -568,8 +781,6 @@ function drawModern(ctx, W, H, text, bookName, authorName) {
     ctx.font = '22px -apple-system, "SF Arabic", system-ui, sans-serif';
     ctx.fillText('✍ ' + authorName, 100, lineY + 80);
   }
-
-  // توقيع دقيق جداً
   ctx.save();
   ctx.globalAlpha = 0.3;
   ctx.fillStyle = accent;
@@ -579,109 +790,19 @@ function drawModern(ctx, W, H, text, bookName, authorName) {
   ctx.restore();
 }
 
-// ============== النمط 3: شرقي مزخرف ==============
-function drawOriental(ctx, W, H, text, bookName, authorName) {
-  // خلفية كحلية داكنة
-  const bg = ctx.createLinearGradient(0, 0, 0, H);
-  bg.addColorStop(0, '#14213d');
-  bg.addColorStop(0.5, '#1a2b4a');
-  bg.addColorStop(1, '#0d1b2f');
-  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
-
-  // زخرفة إسلامية ذهبية باهتة
-  drawIslamicPattern(ctx, W, H, '#c9a961', 0.07);
-
-  // إطار ذهبي مزدوج
-  ctx.strokeStyle = 'rgba(201,169,97,0.9)';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(50, 50, W - 100, H - 100);
-
-  ctx.strokeStyle = 'rgba(201,169,97,0.35)';
-  ctx.lineWidth = 1;
-  ctx.strokeRect(70, 70, W - 140, H - 140);
-
-  // زخارف الزوايا (نجمة صغيرة)
-  const corners = [[70,70],[W-70,70],[70,H-70],[W-70,H-70]];
-  for (const [cx, cy] of corners) {
-    ctx.save();
-    ctx.strokeStyle = '#c9a961';
-    ctx.lineWidth = 2;
-    drawKhatim(ctx, cx, cy, 10);
-    ctx.restore();
-  }
-
-  // علامة الاقتباس ذهبية
-  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-  ctx.fillStyle = 'rgba(201,169,97,0.9)';
-  ctx.font = 'bold 220px Georgia, "Times New Roman", serif';
-  ctx.fillText('\u201C', 80, 10);
-
-  // فاصل أعلى
-  drawOrnamentLine(ctx, W/2, 260, 300, 'rgba(201,169,97,0.75)', true);
-
-  // النص
-  const len = text.length;
-  const fontSize = adaptiveFontSize(len, 66, 42);
-  const lineHeight = Math.round(fontSize * 1.7);
-  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.fillStyle = '#f5ecd9';
-  ctx.font = `500 ${fontSize}px Georgia, "SF Arabic", serif`;
-  const maxWidth = W - 220;
-  const lines = wrapText(ctx, text, maxWidth);
-
-  const topY = 340;
-  const bottomY = H - 340;
-  const totalH = lines.length * lineHeight;
-  let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
-
-  for (const line of lines) {
-    if (y + lineHeight > bottomY + lineHeight) break;
-    ctx.fillText(line, W - 110, y);
-    y += lineHeight;
-  }
-
-  // فاصل أسفل
-  const dividerY = Math.min(y + 50, H - 300);
-  drawOrnamentLine(ctx, W/2, dividerY, 220, 'rgba(201,169,97,0.6)', true);
-
-  // الكتاب والمؤلف
-  ctx.textAlign = 'center'; ctx.direction = 'rtl';
-  if (bookName) {
-    ctx.fillStyle = '#e8d5a8';
-    ctx.font = 'bold 30px Georgia, "SF Arabic", serif';
-    ctx.fillText('📖 ' + bookName, W/2, H - 235);
-  }
-  if (authorName) {
-    ctx.fillStyle = '#c9a961';
-    ctx.font = 'italic 24px Georgia, "SF Arabic", serif';
-    ctx.fillText('✍ ' + authorName, W/2, H - 190);
-  }
-
-  // توقيع ذهبي
-  ctx.save();
-  ctx.globalAlpha = 0.55;
-  ctx.fillStyle = '#c9a961';
-  ctx.font = '18px Georgia, serif';
-  ctx.textAlign = 'right'; ctx.direction = 'ltr';
-  ctx.fillText('sab3-77', W - 80, H - 75);
-  ctx.restore();
-}
-
 // ============== توليد الصورة ==============
 async function generateQuoteImage(rawText, bookName, authorName, style) {
+  await ensureFonts();
   const text = stripPageNumbers(rawText);
   const W = 1080, H = 1350;
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
 
-  if (style === 'modern') {
-    drawModern(ctx, W, H, text, bookName, authorName);
-  } else if (style === 'oriental') {
-    drawOriental(ctx, W, H, text, bookName, authorName);
-  } else {
-    drawClassic(ctx, W, H, text, bookName, authorName);
-  }
+  if (style === 'modern') drawModern(ctx, W, H, text, bookName, authorName);
+  else if (style === 'oriental') drawOriental(ctx, W, H, text, bookName, authorName);
+  else if (style === 'classic') drawClassic(ctx, W, H, text, bookName, authorName);
+  else drawNaskh(ctx, W, H, text, bookName, authorName);
 
   return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
 }
@@ -697,7 +818,6 @@ async function showQuoteImage(text, style) {
     document.getElementById('previewImg').src = url;
     document.getElementById('imgPreview').classList.remove('hidden');
     document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
-    // تحديث حالة chips
     document.querySelectorAll('.style-chip').forEach(c => {
       c.classList.toggle('active', c.dataset.style === useStyle);
     });
@@ -708,9 +828,7 @@ async function showQuoteImage(text, style) {
   }
 }
 
-function closePreview() {
-  document.getElementById('imgPreview').classList.add('hidden');
-}
+function closePreview() { document.getElementById('imgPreview').classList.add('hidden'); }
 
 async function shareImage(blob) {
   const file = new File([blob], 'quote.png', { type: 'image/png' });
@@ -731,33 +849,23 @@ function isFavorite(text, book) { const q = findQuote(text, book); return !!(q &
 function ensureInLibrary(text, book) {
   let q = findQuote(text, book);
   if (!q) {
-    q = {
-      id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-      text, book, favorite: false, date: new Date().toISOString(),
-    };
+    q = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), text, book, favorite: false, date: new Date().toISOString() };
     state.library.push(q); saveLibrary();
   }
   return q;
 }
-function toggleFavorite(text, book) {
-  const q = ensureInLibrary(text, book);
-  q.favorite = !q.favorite; saveLibrary();
-}
+function toggleFavorite(text, book) { const q = ensureInLibrary(text, book); q.favorite = !q.favorite; saveLibrary(); }
 function openLibrary() { document.getElementById('library').classList.remove('hidden'); renderLibrary('all'); }
 function closeLibrary() { document.getElementById('library').classList.add('hidden'); }
 
 function renderLibrary(filter) {
-  const list = document.getElementById('libList');
-  list.innerHTML = '';
+  const list = document.getElementById('libList'); list.innerHTML = '';
   let items = filter === 'fav' ? state.library.filter(q => q.favorite) : [...state.library];
   items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   document.getElementById('libCount').textContent = items.length + ' اقتباس';
   document.getElementById('filterAll').className = 'btn ' + (filter === 'all' ? 'btn-purple' : 'btn-gray');
   document.getElementById('filterFav').className = 'btn ' + (filter === 'fav' ? 'btn-purple' : 'btn-gray');
-  if (!items.length) {
-    list.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:30px;">لا توجد اقتباسات بعد</div>';
-    return;
-  }
+  if (!items.length) { list.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:30px;">لا توجد اقتباسات بعد</div>'; return; }
   items.forEach(q => {
     const card = document.createElement('div');
     card.className = 'card';
@@ -769,22 +877,17 @@ function renderLibrary(filter) {
       </div>
       <div class="q-text">${escapeHtml(q.text)}</div>
       <div class="card-actions">
-        <button class="btn btn-green" data-act="copy">📋 نسخ</button>
+        <button class="btn btn-green" data-act="copy">📋</button>
         <button class="btn btn-blue" data-act="share">📤</button>
         <button class="btn btn-purple" data-act="image">📸</button>
         <button class="btn btn-red" data-act="del">🗑</button>
       </div>`;
-    card.querySelector('.star').addEventListener('click', () => {
-      q.favorite = !q.favorite; saveLibrary(); renderLibrary(filter);
-    });
+    card.querySelector('.star').addEventListener('click', () => { q.favorite = !q.favorite; saveLibrary(); renderLibrary(filter); });
     card.querySelector('[data-act="copy"]').addEventListener('click', () => copyQuote(q.text));
     card.querySelector('[data-act="share"]').addEventListener('click', () => shareQuote(q.text));
     card.querySelector('[data-act="image"]').addEventListener('click', () => showQuoteImage(q.text));
     card.querySelector('[data-act="del"]').addEventListener('click', () => {
-      if (confirm('حذف؟')) {
-        state.library = state.library.filter(x => x.id !== q.id);
-        saveLibrary(); renderLibrary(filter);
-      }
+      if (confirm('حذف؟')) { state.library = state.library.filter(x => x.id !== q.id); saveLibrary(); renderLibrary(filter); }
     });
     list.appendChild(card);
   });
@@ -828,13 +931,8 @@ function renderQuotes() {
   }));
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-}
-async function copyQuote(text) {
-  try { await navigator.clipboard.writeText(text); toast('✅ تم النسخ'); }
-  catch (e) { toast('❌ فشل النسخ'); }
-}
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+async function copyQuote(text) { try { await navigator.clipboard.writeText(text); toast('✅ تم النسخ'); } catch (e) { toast('❌ فشل النسخ'); } }
 async function shareQuote(text) {
   if (navigator.share) {
     try { await navigator.share({ text }); }
@@ -868,17 +966,16 @@ async function generate() {
     genBtn.textContent = '🔄 اقتباسات جديدة';
   } catch (e) {
     setStatus('حدث خطأ', 'err');
-    document.getElementById('quotes').innerHTML =
-      '<div class="card" style="color:#c53030;text-align:center;padding:20px;">حدث خطأ:<br><br>' +
-      escapeHtml(e.message) + '</div>';
+    document.getElementById('quotes').innerHTML = '<div class="card" style="color:#c53030;text-align:center;padding:20px;">حدث خطأ:<br><br>' + escapeHtml(e.message) + '</div>';
   } finally {
     state.busy = false; genBtn.disabled = false; showProgress(false);
   }
 }
 
 // ============== الأحداث ==============
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   loadLibrary(); loadApiKey();
+  ensureFonts();
 
   document.getElementById('pickPdfBtn').addEventListener('click', () => document.getElementById('pdfInput').click());
   document.getElementById('pdfInput').addEventListener('change', (e) => {
@@ -902,7 +999,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('styleBtn').addEventListener('click', function() {
-    const order = ['classic', 'modern', 'oriental'];
+    const order = ['naskh', 'oriental', 'classic', 'modern'];
     let i = order.indexOf(state.imageStyle);
     i = (i + 1) % order.length;
     state.imageStyle = order[i];
@@ -916,11 +1013,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('filterFav').addEventListener('click', () => renderLibrary('fav'));
 
   document.getElementById('bookName').addEventListener('input', e => state.pdfName = e.target.value || 'كتاب');
-  document.getElementById('authorName').addEventListener('input', e => {
-    state.authorName = e.target.value; saveAuthor(e.target.value);
-  });
+  document.getElementById('authorName').addEventListener('input', e => { state.authorName = e.target.value; saveAuthor(e.target.value); });
 
-  // style chips في المعاينة
   document.querySelectorAll('.style-chip').forEach(chip => {
     chip.addEventListener('click', async () => {
       state.imageStyle = chip.dataset.style;
