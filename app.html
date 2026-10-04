@@ -9,7 +9,7 @@
 <title>مستخرج الاقتباسات الذكي</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Aref+Ruqaa:wght@400;700&family=Scheherazade+New:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Aref+Ruqaa:wght@400;700&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -119,6 +119,11 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 
 const STYLE_NAMES = { naskh: '📜 نسخي فاخر', oriental: '🌙 شرقي', classic: '🏛️ كلاسيكي', modern: '⚡ حديث' };
 
+// ✅ قائمة الخطوط العربية (الأولى تُجرَّب أولاً)
+const ARABIC_FONTS = ['Amiri', 'Noto Naskh Arabic', 'Scheherazade New'];
+const ARABIC_FONT_STACK = '"Amiri", "Noto Naskh Arabic", "Scheherazade New", Georgia, serif';
+const ARABIC_FONT_STACK_BOLD = '700 1px "Amiri", "Noto Naskh Arabic", "Scheherazade New", Georgia, serif';
+
 let state = {
   pdfFile: null, pdfText: '', pdfName: '', authorName: '',
   quotes: [], quoteCount: 10, library: [], currentHeader: '',
@@ -127,36 +132,48 @@ let state = {
 };
 
 let fontsReady = false;
+let warmupDone = false;
 
-// ✅ تحميل صارم ومتعدد للخطوط لضمان عدم تشويه العربية
+// ✅ تحميل الخطوط + تسخين محرك التشكيل
 async function ensureFonts() {
-  if (fontsReady) return;
+  if (fontsReady && warmupDone) return;
   try {
-    const sizes = ['74', '70', '68', '64', '58', '52', '46', '42'];
-    const families = ['Amiri', '"Aref Ruqaa"', '"Scheherazade New"'];
-    const weights = ['400', '700'];
-    const styles = ['normal', 'italic'];
+    // 1) انتظر تحميل الخطوط من Google Fonts
     const tasks = [];
-    for (const w of weights) {
-      for (const s of styles) {
-        for (const sz of sizes) {
-          for (const f of families) {
-            tasks.push(document.fonts.load(`${s} ${w} ${sz}px ${f}`).catch(() => null));
-          }
-        }
-      }
+    for (const f of ARABIC_FONTS) {
+      tasks.push(document.fonts.load(`400 40px "${f}"`).catch(() => null));
+      tasks.push(document.fonts.load(`700 40px "${f}"`).catch(() => null));
+      tasks.push(document.fonts.load(`italic 400 40px "${f}"`).catch(() => null));
     }
-    // أدخل الأصغر أولاً لتسريع التحميل
-    await Promise.all([
-      document.fonts.load('400 20px Amiri').catch(() => null),
-      document.fonts.load('700 20px Amiri').catch(() => null),
-      document.fonts.ready,
-    ]);
-    // ثم الباقي
     await Promise.all(tasks);
     await document.fonts.ready;
-    // تأخير أمان لضمان تحديث جليف العربية
-    await new Promise(r => setTimeout(r, 350));
+
+    // 2) 🔥 تسخين محرك Canvas لضمان تشكيل العربية بشكل صحيح
+    if (!warmupDone) {
+      const warmupCanvas = document.createElement('canvas');
+      warmupCanvas.width = 800;
+      warmupCanvas.height = 200;
+      const wctx = warmupCanvas.getContext('2d');
+      wctx.direction = 'rtl';
+      wctx.textAlign = 'right';
+      wctx.textBaseline = 'top';
+      wctx.font = `700 40px ${ARABIC_FONT_STACK}`;
+      // نص اختبار فيه وصلات وتشكيل
+      const testTexts = [
+        'الاستمرارية أهم من الشغف صديقي العزيز',
+        'لا حول ولا قوة إلا بالله',
+        'محمد عبد الله الرحمن الرحيم',
+        'الحمد لله رب العالمين',
+      ];
+      for (const t of testTexts) {
+        wctx.fillText(t, 780, 40, 760);
+        wctx.measureText(t);
+      }
+      // تأخير أمان
+      await new Promise(r => setTimeout(r, 450));
+      warmupDone = true;
+    }
+
     fontsReady = true;
   } catch (e) { console.warn('font load', e); }
 }
@@ -374,20 +391,32 @@ function drawOrnamentLine(ctx, cx, y, width, color, withDiamond) {
   ctx.restore();
 }
 
-function fillText3D(ctx, text, x, y, color, highlight, shadow) {
+// ✅ رسم نص عربي بشكل صحيح: يستخدم maxWidth لإجبار المتصفح على التشكيل
+function fillText3D(ctx, text, x, y, color, highlight, shadow, maxWidth) {
+  const mw = maxWidth || (ctx.measureText(text).width + 200);
   ctx.save();
-  ctx.fillStyle = shadow; ctx.fillText(text, x + 2, y + 3);
-  ctx.fillStyle = highlight; ctx.fillText(text, x - 1, y - 1);
-  ctx.fillStyle = color; ctx.fillText(text, x, y);
+  ctx.fillStyle = shadow;
+  ctx.fillText(text, x + 2, y + 3, mw);
+  ctx.fillStyle = highlight;
+  ctx.fillText(text, x - 1, y - 1, mw);
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y, mw);
   ctx.restore();
+}
+
+// ✅ ضبط سياق الرسم للعربية قبل أي عملية نصية
+function setArabicContext(ctx) {
+  ctx.direction = 'rtl';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
 }
 
 function drawWatermark(ctx, W, H, color) {
   ctx.save();
   ctx.globalAlpha = 0.12;
   ctx.fillStyle = color;
-  ctx.font = 'bold 32px Amiri, system-ui, sans-serif';
   ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `bold 32px ${ARABIC_FONT_STACK}`;
   const positions = [
     { x: W * 0.25, y: H * 0.20, rot: -22 },
     { x: W * 0.75, y: H * 0.38, rot: -22 },
@@ -401,21 +430,17 @@ function drawWatermark(ctx, W, H, color) {
   ctx.restore();
 }
 
-// ✅ دالة مركزية لحساب موضع النص (تتمركز بين فاصلين ثابتين)
 function layoutTextBlock(H, totalTextHeight) {
   const topDivider = 245;
   const bottomDivider = H - 380;
   const centerY = (topDivider + bottomDivider) / 2;
   let startY = centerY - totalTextHeight / 2;
-  // ضمان عدم تجاوز الحدود
   if (startY < topDivider + 50) startY = topDivider + 50;
-  if (startY + totalTextHeight > bottomDivider - 50) {
-    startY = bottomDivider - 50 - totalTextHeight;
-  }
+  if (startY + totalTextHeight > bottomDivider - 50) startY = bottomDivider - 50 - totalTextHeight;
   return { startY, topDivider, bottomDivider };
 }
 
-// ============== النمط 1: نسخي فاخر (كحلي + ذهبي) ==============
+// ============== النمط 1: نسخي فاخر ==============
 function drawNaskh(ctx, W, H, text, bookName, authorName) {
   const bg = ctx.createLinearGradient(0, 0, W, H);
   bg.addColorStop(0, '#0a1a30'); bg.addColorStop(0.5, '#0f2542'); bg.addColorStop(1, '#071224');
@@ -433,15 +458,11 @@ function drawNaskh(ctx, W, H, text, bookName, authorName) {
   }
   ctx.restore();
 
-  const gold = '#c9a961';
-  const goldDark = '#8a6d2f';
-  const goldLight = '#e8d5a8';
-  const goldBright = '#f5e6b8';
+  const gold = '#c9a961', goldDark = '#8a6d2f', goldLight = '#e8d5a8', goldBright = '#f5e6b8';
   const textColor = '#e8d5a8';
   const textHighlight = 'rgba(255, 245, 200, 0.85)';
   const textShadow = 'rgba(0, 0, 0, 0.85)';
 
-  // الإطارات
   ctx.strokeStyle = gold; ctx.lineWidth = 5;
   ctx.strokeRect(38, 38, W - 76, H - 76);
   ctx.strokeStyle = goldDark; ctx.lineWidth = 1.5;
@@ -465,44 +486,40 @@ function drawNaskh(ctx, W, H, text, bookName, authorName) {
   const len = text.length;
   const fontSize = adaptiveFontSize(len, 74, 46);
   const lineHeight = Math.round(fontSize * 1.75);
-  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.font = `700 ${fontSize}px Amiri, "Scheherazade New", Georgia, serif`;
+  setArabicContext(ctx);
+  ctx.font = `700 ${fontSize}px ${ARABIC_FONT_STACK}`;
   const maxWidth = W - 200;
   const lines = wrapText(ctx, text, maxWidth);
   const totalTextHeight = lines.length * lineHeight;
 
-  // ✅ تخطيط متمركز
   const { startY, topDivider, bottomDivider } = layoutTextBlock(H, totalTextHeight);
 
-  // الفاصل العلوي (ثابت)
   drawOrnamentLine(ctx, W/2, topDivider, 300, gold, true);
 
-  // رسم النص
   let y = startY;
   for (const line of lines) {
-    fillText3D(ctx, line, W - 100, y, textColor, textHighlight, textShadow);
+    fillText3D(ctx, line, W - 100, y, textColor, textHighlight, textShadow, maxWidth);
     y += lineHeight;
   }
 
-  // ✅ الفاصل السفلي (ثابت)
   drawOrnamentLine(ctx, W/2, bottomDivider, 240, gold, true);
 
-  // الكتاب والمؤلف
-  ctx.textAlign = 'center'; ctx.direction = 'rtl'; ctx.textBaseline = 'top';
+  setArabicContext(ctx);
+  ctx.textAlign = 'center';
   if (bookName) {
-    ctx.font = 'bold 34px Amiri, "Scheherazade New", Georgia, serif';
+    ctx.font = `700 34px ${ARABIC_FONT_STACK}`;
     const bookText = '📖 ﴿ ' + bookName + ' ﴾';
     ctx.save();
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
-    ctx.fillText(bookText, W/2 + 2, H - 235 + 3);
+    ctx.fillText(bookText, W/2 + 2, H - 235 + 3, W - 200);
     ctx.fillStyle = goldBright;
-    ctx.fillText(bookText, W/2, H - 235);
+    ctx.fillText(bookText, W/2, H - 235, W - 200);
     ctx.restore();
   }
   if (authorName) {
-    ctx.font = 'italic 26px Amiri, "Scheherazade New", Georgia, serif';
+    ctx.font = `italic 400 26px ${ARABIC_FONT_STACK}`;
     ctx.fillStyle = gold;
-    ctx.fillText('✍ ' + authorName, W/2, H - 180);
+    ctx.fillText('✍ ' + authorName, W/2, H - 180, W - 200);
   }
 
   drawWatermark(ctx, W, H, goldLight);
@@ -545,8 +562,8 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
   const len = text.length;
   const fontSize = adaptiveFontSize(len, 70, 42);
   const lineHeight = Math.round(fontSize * 1.75);
-  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.font = `700 ${fontSize}px Amiri, "Scheherazade New", Georgia, serif`;
+  setArabicContext(ctx);
+  ctx.font = `700 ${fontSize}px ${ARABIC_FONT_STACK}`;
   const maxWidth = W - 220;
   const lines = wrapText(ctx, text, maxWidth);
   const totalTextHeight = lines.length * lineHeight;
@@ -557,22 +574,23 @@ function drawOriental(ctx, W, H, text, bookName, authorName) {
 
   let y = startY;
   for (const line of lines) {
-    fillText3D(ctx, line, W - 110, y, '#f5ecd9', 'rgba(255,255,255,0.35)', 'rgba(0,0,0,0.55)');
+    fillText3D(ctx, line, W - 110, y, '#f5ecd9', 'rgba(255,255,255,0.35)', 'rgba(0,0,0,0.55)', maxWidth);
     y += lineHeight;
   }
 
   drawOrnamentLine(ctx, W/2, bottomDivider, 220, 'rgba(201,169,97,0.6)', true);
 
-  ctx.textAlign = 'center'; ctx.direction = 'rtl'; ctx.textBaseline = 'top';
+  setArabicContext(ctx);
+  ctx.textAlign = 'center';
   if (bookName) {
     ctx.fillStyle = '#e8d5a8';
-    ctx.font = 'bold 32px Amiri, "Scheherazade New", serif';
-    ctx.fillText('📖 ﴿ ' + bookName + ' ﴾', W/2, H - 230);
+    ctx.font = `700 32px ${ARABIC_FONT_STACK}`;
+    ctx.fillText('📖 ﴿ ' + bookName + ' ﴾', W/2, H - 230, W - 200);
   }
   if (authorName) {
     ctx.fillStyle = '#c9a961';
-    ctx.font = 'italic 26px Amiri, "Scheherazade New", serif';
-    ctx.fillText('✍ ' + authorName, W/2, H - 180);
+    ctx.font = `italic 400 26px ${ARABIC_FONT_STACK}`;
+    ctx.fillText('✍ ' + authorName, W/2, H - 180, W - 200);
   }
   drawWatermark(ctx, W, H, '#c9a961');
 }
@@ -606,8 +624,8 @@ function drawClassic(ctx, W, H, text, bookName, authorName) {
   const len = text.length;
   const fontSize = adaptiveFontSize(len, 68, 42);
   const lineHeight = Math.round(fontSize * 1.7);
-  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.font = `700 ${fontSize}px Amiri, Georgia, serif`;
+  setArabicContext(ctx);
+  ctx.font = `700 ${fontSize}px ${ARABIC_FONT_STACK}`;
   const maxWidth = W - 220;
   const lines = wrapText(ctx, text, maxWidth);
   const totalTextHeight = lines.length * lineHeight;
@@ -618,27 +636,28 @@ function drawClassic(ctx, W, H, text, bookName, authorName) {
 
   let y = startY;
   for (const line of lines) {
-    fillText3D(ctx, line, W - 110, y, '#2a1f14', 'rgba(255,240,200,0.75)', 'rgba(0,0,0,0.28)');
+    fillText3D(ctx, line, W - 110, y, '#2a1f14', 'rgba(255,240,200,0.75)', 'rgba(0,0,0,0.28)', maxWidth);
     y += lineHeight;
   }
 
   drawOrnamentLine(ctx, W/2, bottomDivider, 220, 'rgba(184,148,90,0.55)', true);
 
-  ctx.textAlign = 'center'; ctx.direction = 'rtl'; ctx.textBaseline = 'top';
+  setArabicContext(ctx);
+  ctx.textAlign = 'center';
   if (bookName) {
     ctx.fillStyle = '#5c4a2f';
-    ctx.font = 'bold 30px Amiri, Georgia, serif';
-    ctx.fillText('📖 ﴿ ' + bookName + ' ﴾', W/2, H - 240);
+    ctx.font = `700 30px ${ARABIC_FONT_STACK}`;
+    ctx.fillText('📖 ﴿ ' + bookName + ' ﴾', W/2, H - 240, W - 200);
   }
   if (authorName) {
     ctx.fillStyle = '#8a7a5f';
-    ctx.font = 'italic 24px Amiri, Georgia, serif';
-    ctx.fillText('✍ ' + authorName, W/2, H - 195);
+    ctx.font = `italic 400 24px ${ARABIC_FONT_STACK}`;
+    ctx.fillText('✍ ' + authorName, W/2, H - 195, W - 200);
   }
 
   ctx.save(); ctx.globalAlpha = 0.09; ctx.fillStyle = '#5a3a10';
-  ctx.font = 'bold 32px Amiri, system-ui, sans-serif';
   ctx.direction = 'rtl'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `bold 32px ${ARABIC_FONT_STACK}`;
   const positions = [
     { x: W * 0.25, y: H * 0.20, rot: -22 }, { x: W * 0.75, y: H * 0.38, rot: -22 },
     { x: W * 0.28, y: H * 0.60, rot: -22 }, { x: W * 0.72, y: H * 0.80, rot: -22 },
@@ -666,8 +685,8 @@ function drawModern(ctx, W, H, text, bookName, authorName) {
   const len = text.length;
   const fontSize = adaptiveFontSize(len, 74, 46);
   const lineHeight = Math.round(fontSize * 1.55);
-  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
-  ctx.font = `800 ${fontSize}px -apple-system, "SF Arabic", system-ui, sans-serif`;
+  setArabicContext(ctx);
+  ctx.font = `800 ${fontSize}px -apple-system, "SF Arabic", ${ARABIC_FONT_STACK}`;
   const maxWidth = W - 200;
   const lines = wrapText(ctx, text, maxWidth);
   const totalTextHeight = lines.length * lineHeight;
@@ -677,7 +696,7 @@ function drawModern(ctx, W, H, text, bookName, authorName) {
 
   for (const line of lines) {
     ctx.fillStyle = accent;
-    ctx.fillText(line, W - 100, y);
+    ctx.fillText(line, W - 100, y, maxWidth);
     y += lineHeight;
   }
 
@@ -687,20 +706,21 @@ function drawModern(ctx, W, H, text, bookName, authorName) {
   ctx.fillStyle = accentColor;
   ctx.beginPath(); ctx.arc(W - 100, lineY, 8, 0, Math.PI * 2); ctx.fill();
 
-  ctx.textAlign = 'left'; ctx.direction = 'rtl'; ctx.textBaseline = 'top';
+  setArabicContext(ctx);
+  ctx.textAlign = 'left';
   if (bookName) {
     ctx.fillStyle = accent;
-    ctx.font = 'bold 28px -apple-system, "SF Arabic", system-ui, sans-serif';
-    ctx.fillText('📖 ' + bookName, 100, lineY + 30);
+    ctx.font = `700 28px -apple-system, "SF Arabic", ${ARABIC_FONT_STACK}`;
+    ctx.fillText('📖 ' + bookName, 100, lineY + 30, W - 200);
   }
   if (authorName) {
     ctx.fillStyle = '#64748b';
-    ctx.font = '22px -apple-system, "SF Arabic", system-ui, sans-serif';
-    ctx.fillText('✍ ' + authorName, 100, lineY + 80);
+    ctx.font = `400 22px -apple-system, "SF Arabic", ${ARABIC_FONT_STACK}`;
+    ctx.fillText('✍ ' + authorName, 100, lineY + 80, W - 200);
   }
   ctx.save(); ctx.globalAlpha = 0.07; ctx.fillStyle = '#0f172a';
-  ctx.font = 'bold 32px -apple-system, system-ui, sans-serif';
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `bold 32px ${ARABIC_FONT_STACK}`;
   const positions = [
     { x: W * 0.25, y: H * 0.20, rot: -22 }, { x: W * 0.75, y: H * 0.38, rot: -22 },
     { x: W * 0.28, y: H * 0.60, rot: -22 }, { x: W * 0.72, y: H * 0.80, rot: -22 },
@@ -714,7 +734,7 @@ function drawModern(ctx, W, H, text, bookName, authorName) {
 
 // ============== توليد الصورة ==============
 async function generateQuoteImage(rawText, bookName, authorName, style) {
-  await ensureFonts(); // ✅ إجباري قبل الرسم
+  await ensureFonts();
   const text = stripPageNumbers(rawText);
   const W = 1080, H = 1350;
   const canvas = document.createElement('canvas');
@@ -895,7 +915,7 @@ async function generate() {
 // ============== الأحداث ==============
 document.addEventListener('DOMContentLoaded', async () => {
   loadLibrary(); loadApiKey();
-  ensureFonts(); // ✅ تحميل الخطوط فورًا عند فتح الصفحة
+  ensureFonts();
 
   document.getElementById('pickPdfBtn').addEventListener('click', () => document.getElementById('pdfInput').click());
   document.getElementById('pdfInput').addEventListener('change', (e) => {
@@ -911,20 +931,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('genBtn').addEventListener('click', generate);
 
   document.getElementById('countBtn').addEventListener('click', function() {
-    const opts = [5, 10, 15, 20];
-    let idx = opts.indexOf(state.quoteCount);
+    const opts = [_5, 10, 15, 20NAM];
+    let idx = opts.indexOf(state.quoteCountES);
     idx = (idx + 1) % opts.length;
     state.quoteCount = opts[idx];
     this.textContent = '🔢 ' + state.quoteCount;
   });
 
   document.getElementById('styleBtn').addEventListener('click', function() {
-    const order = ['naskh', 'oriental', 'classic', 'modern'];
-    let i = order.indexOf(state.imageStyle);
-    i = (i + 1) % order.length;
+    const order = ['naskh', 'oriental', 'classic', '[modern'];
+    let i = orderstate.indexOf(state.imageStyle);
+    i = (i +.image 1) % order.length;
     state.imageStyle = order[i];
     saveStyle(state.imageStyle);
-    this.textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
+    this.textContent = '🎨 ' + STYLEStyle].split(' ').slice(1).join(' ');
     toast('النمط: ' + STYLE_NAMES[state.imageStyle]);
   });
 
