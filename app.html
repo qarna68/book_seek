@@ -12,8 +12,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body {
   font-family: -apple-system, 'SF Arabic', system-ui, sans-serif;
-  background: #f8f9fa;
-  color: #1a1a1a;
+  background: #f8f9fa; color: #1a1a1a;
   padding: 16px;
   padding-top: max(16px, env(safe-area-inset-top));
   padding-bottom: max(16px, env(safe-area-inset-bottom));
@@ -23,30 +22,17 @@ body {
 h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700; }
 
 .field {
-  width: 100%;
-  padding: 12px 14px;
-  font-size: 14px;
-  border: 1px solid #cbd5e0;
-  border-radius: 10px;
-  background: #fff;
-  margin-bottom: 10px;
-  font-family: inherit;
-  direction: rtl;
+  width: 100%; padding: 12px 14px; font-size: 14px;
+  border: 1px solid #cbd5e0; border-radius: 10px; background: #fff;
+  margin-bottom: 10px; font-family: inherit; direction: rtl;
 }
 .field:focus { outline: 2px solid #2b6cb0; border-color: transparent; }
 
 .row { display: flex; gap: 8px; margin-bottom: 10px; }
 .btn {
-  flex: 1;
-  padding: 12px;
-  font-size: 14px;
-  font-weight: 700;
-  border: none;
-  border-radius: 10px;
-  color: #fff;
-  font-family: inherit;
-  cursor: pointer;
-  transition: transform 0.1s;
+  flex: 1; padding: 12px; font-size: 14px; font-weight: 700;
+  border: none; border-radius: 10px; color: #fff;
+  font-family: inherit; cursor: pointer; transition: transform 0.1s;
 }
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.5; }
@@ -56,6 +42,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .btn-green { background: #2f855a; }
 .btn-red { background: #c53030; }
 .btn-gray { background: #718096; }
+.btn-gold { background: #b8945a; }
 
 .status { text-align: center; font-size: 12px; color: #718096; padding: 8px; min-height: 30px; }
 .status.ok { color: #2f855a; font-weight: 700; }
@@ -83,9 +70,17 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .progress { background: #e2e8f0; border-radius: 8px; height: 6px; overflow: hidden; margin: 8px 0; }
 .progress-bar { background: #2b6cb0; height: 100%; width: 0; transition: width 0.3s; }
 
-.img-preview { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; flex-direction: column; gap: 16px; }
-.img-preview img { max-width: 100%; max-height: 70vh; border-radius: 12px; }
+.img-preview { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; flex-direction: column; gap: 16px; overflow-y: auto; }
+.img-preview img { max-width: 100%; max-height: 62vh; border-radius: 12px; }
 .img-preview .btn { max-width: 200px; }
+.style-picker { display: flex; gap: 6px; max-width: 100%; flex-wrap: wrap; justify-content: center; }
+.style-chip {
+  padding: 8px 14px; border-radius: 20px; font-size: 12px;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1); color: #fff;
+  cursor: pointer; font-family: inherit;
+}
+.style-chip.active { background: #b8945a; border-color: #b8945a; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -103,18 +98,15 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   <input id="pdfInput" type="file" accept=".pdf" style="display:none;">
 
   <div class="row">
-    <button id="countBtn" class="btn btn-gray">🔢 10 اقتباسات</button>
+    <button id="countBtn" class="btn btn-gray">🔢 10</button>
+    <button id="styleBtn" class="btn btn-gold">🎨 كلاسيكي</button>
     <button id="libBtn" class="btn btn-purple">📚 المكتبة</button>
   </div>
 
   <button id="genBtn" class="btn btn-blue" style="width:100%;">استخراج ✨</button>
 
   <div id="status" class="status">ارفع ملف PDF للبدء</div>
-
-  <div id="progressWrap" class="progress hidden">
-    <div id="progressBar" class="progress-bar"></div>
-  </div>
-
+  <div id="progressWrap" class="progress hidden"><div id="progressBar" class="progress-bar"></div></div>
   <div id="quotes" class="quotes"></div>
 </div>
 
@@ -132,6 +124,11 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 </div>
 
 <div id="imgPreview" class="img-preview hidden">
+  <div class="style-picker">
+    <button class="style-chip active" data-style="classic">🏛️ كلاسيكي فاخر</button>
+    <button class="style-chip" data-style="modern">⚡ حديث بسيط</button>
+    <button class="style-chip" data-style="oriental">🌙 شرقي مزخرف</button>
+  </div>
   <img id="previewImg" alt="preview">
   <div class="row" style="width:100%;max-width:400px;">
     <button id="shareImgBtn" class="btn btn-blue">📤 مشاركة</button>
@@ -147,20 +144,18 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 const STORAGE_KEY = 'quotes_library_v1';
 const API_KEY_STORAGE = 'quotes_api_key';
 const AUTHOR_STORAGE = 'quotes_author';
+const STYLE_STORAGE = 'quotes_style';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+const STYLE_NAMES = { classic: '🏛️ كلاسيكي', modern: '⚡ حديث', oriental: '🌙 شرقي' };
+
 let state = {
-  pdfFile: null,
-  pdfText: '',
-  pdfName: '',
-  authorName: '',
-  quotes: [],
-  quoteCount: 10,
-  library: [],
-  currentHeader: '',
-  busy: false,
+  pdfFile: null, pdfText: '', pdfName: '', authorName: '',
+  quotes: [], quoteCount: 10, library: [], currentHeader: '',
+  busy: false, imageStyle: 'classic',
+  currentImageText: '', currentImageBlob: null,
 };
 
 function loadLibrary() {
@@ -169,51 +164,42 @@ function loadLibrary() {
     state.library = data ? JSON.parse(data) : [];
   } catch (e) { state.library = []; }
 }
-
 function saveLibrary() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.library)); } catch (e) {}
 }
-
 function toast(msg, ms) {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.classList.add('show');
+  el.textContent = msg; el.classList.add('show');
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.remove('show'), ms || 2200);
 }
-
 function setStatus(text, cls) {
   const el = document.getElementById('status');
   el.textContent = text;
   el.className = 'status' + (cls ? ' ' + cls : '');
 }
-
 function showProgress(show, percent) {
   const wrap = document.getElementById('progressWrap');
   const bar = document.getElementById('progressBar');
   wrap.classList.toggle('hidden', !show);
   if (percent !== undefined) bar.style.width = percent + '%';
 }
-
 function loadApiKey() {
   try {
     const k = localStorage.getItem(API_KEY_STORAGE);
     if (k) document.getElementById('apiKey').value = k;
     const a = localStorage.getItem(AUTHOR_STORAGE);
-    if (a) {
-      document.getElementById('authorName').value = a;
-      state.authorName = a;
+    if (a) { document.getElementById('authorName').value = a; state.authorName = a; }
+    const s = localStorage.getItem(STYLE_STORAGE);
+    if (s && STYLE_NAMES[s]) {
+      state.imageStyle = s;
+      document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[s].split(' ').slice(1).join(' ');
     }
   } catch (e) {}
 }
-
-function saveApiKey(key) {
-  try { localStorage.setItem(API_KEY_STORAGE, key); } catch (e) {}
-}
-
-function saveAuthor(a) {
-  try { localStorage.setItem(AUTHOR_STORAGE, a); } catch (e) {}
-}
+function saveApiKey(k) { try { localStorage.setItem(API_KEY_STORAGE, k); } catch (e) {} }
+function saveAuthor(a) { try { localStorage.setItem(AUTHOR_STORAGE, a); } catch (e) {} }
+function saveStyle(s) { try { localStorage.setItem(STYLE_STORAGE, s); } catch (e) {} }
 
 async function extractPdfText(file) {
   const arrayBuffer = await file.arrayBuffer();
@@ -223,7 +209,6 @@ async function extractPdfText(file) {
   let start = 1;
   if (totalPages > MAX) start = Math.floor(Math.random() * (totalPages - MAX)) + 1;
   const end = Math.min(start + MAX - 1, totalPages);
-
   let text = '';
   for (let i = start; i <= end; i++) {
     const page = await pdf.getPage(i);
@@ -240,8 +225,7 @@ function cleanPdfText(text) {
   text = text.replace(/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ff\uac00-\ud7af]+/g, '');
   text = text.replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, '');
   text = text.replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/gu, '');
-  text = text.replace(/[ \t]+/g, ' ');
-  text = text.replace(/\n{3,}/g, '\n\n');
+  text = text.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n');
   return text.trim();
 }
 
@@ -255,9 +239,8 @@ function cleanOutputText(text) {
   for (const line of lines) {
     const s = line.trim();
     if (!s) { filtered.push(''); continue; }
-    const hasArabic = /[\u0600-\u06FF]/.test(s);
-    const isMarker = /^\[?صفحة|^\d+\s*[\-\.\]\)]|^\d+$/.test(s);
-    if (hasArabic || isMarker) filtered.push(line);
+    if (/[\u0600-\u06FF]/.test(s) || /^\[?صفحة|^\d+\s*[\-\.\]\)]|^\d+$/.test(s))
+      filtered.push(line);
   }
   return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
@@ -290,7 +273,6 @@ const MODELS = [
   'openai/gpt-oss-120b',
   'google/gemini-2.5-flash',
   'meta-llama/llama-3.3-70b-instruct',
-  'qwen/qwen-2.5-72b-instruct',
 ];
 
 async function callOpenRouter(apiKey, bookName, bookText, count) {
@@ -299,7 +281,7 @@ async function callOpenRouter(apiKey, bookName, bookText, count) {
 `أنت مساعد متخصص في استخراج الاقتباسات الحرفية من الكتب العربية.
 
 تحذيرات مهمة جداً:
-- النص المرفق قد يحتوي على رموز غريبة، أو أحرف صينية، أو <unk>.
+- النص المرفق قد يحتوي على رموز غريبة أو أحرف صينية أو unk.
 - تجاهل تماماً أي محتوى غير عربي.
 - اكتب بالعربية الفصحى فقط.
 
@@ -310,14 +292,13 @@ async function callOpenRouter(apiKey, bookName, bookText, count) {
 
 تعليمات الإخراج الصارمة:
 1. ابدأ القائمة مباشرة بالاقتباس الأول.
-2. عربي فقط — يمنع أي كلمة إنجليزية.
+2. عربي فقط.
 3. طابق النص حرفياً بدون اختلاق.
 4. رقّم من 1 إلى ${count}.
 5. اذكر رقم الصفحة بعد كل اقتباس بصيغة [صفحة X].
 
 نص الكتاب:
 ${bookText}`;
-
   const errors = [];
   for (const model of MODELS) {
     setStatus(`(${model.split('/').pop()}) جاري الاتصال...`);
@@ -331,352 +312,395 @@ ${bookText}`;
           'X-Title': 'Arabic Quotes Extractor'
         },
         body: JSON.stringify({
-          model: model,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.85,
-          max_tokens: 2500,
+          model, messages: [{ role: 'user', content: prompt }],
+          temperature: 0.85, max_tokens: 2500,
         }),
       });
-
       if (res.status === 200) {
         const data = await res.json();
-        let answer = data.choices?.[0]?.message?.content || '';
-        answer = cleanOutputText(answer);
-        const arabic = (answer.match(/[\u0600-\u06FF]/g) || []).length;
-        if (arabic < 50) { errors.push(`${model}: مخرجات غير عربية`); continue; }
-        return { text: answer, model: model };
+        let answer = cleanOutputText(data.choices?.[0]?.message?.content || '');
+        if ((answer.match(/[\u0600-\u06FF]/g) || []).length < 50) {
+          errors.push(`${model}: غير عربية`); continue;
+        }
+        return { text: answer, model };
       }
-
       const errData = await res.json().catch(() => ({}));
-      const msg = errData.error?.message || `HTTP ${res.status}`;
-      errors.push(`${model}: ${msg.substring(0, 100)}`);
-
-      if ([429, 500, 502, 503].includes(res.status)) {
-        await new Promise(r => setTimeout(r, 3000));
-      }
-    } catch (e) {
-      errors.push(`${model}: ${e.message}`);
-    }
+      errors.push(`${model}: ${(errData.error?.message || 'HTTP ' + res.status).substring(0, 100)}`);
+      if ([429, 500, 502, 503].includes(res.status)) await new Promise(r => setTimeout(r, 3000));
+    } catch (e) { errors.push(`${model}: ${e.message}`); }
   }
-  throw new Error('فشلت جميع المحاولات:\n' + errors.join('\n'));
+  throw new Error('فشلت المحاولات:\n' + errors.join('\n'));
 }
 
-// ============== أدوات رسم الزخارف ==============
-function drawDiamond(ctx, x, y, size, color) {
-  ctx.save();
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(x, y - size);
-  ctx.lineTo(x + size, y);
-  ctx.lineTo(x, y + size);
-  ctx.lineTo(x - size, y);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+// ============== أدوات الرسم ==============
+function stripPageNumbers(text) {
+  let t = text.replace(/\s*\[صفحة\s*\d+\]\s*/g, ' ').replace(/\[\s*\]/g, ' ');
+  return t.replace(/\s+/g, ' ').trim();
 }
 
-function drawOrnamentDivider(ctx, cx, y, width, color) {
-  const half = width / 2;
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  // خط يسار
-  ctx.beginPath();
-  ctx.moveTo(cx - half, y);
-  ctx.lineTo(cx - 20, y);
-  ctx.stroke();
-  // خط يمين
-  ctx.beginPath();
-  ctx.moveTo(cx + 20, y);
-  ctx.lineTo(cx + half, y);
-  ctx.stroke();
-  // معين في الوسط
-  drawDiamond(ctx, cx, y, 8, color);
-  // نقاط صغيرة على الجانبين
-  drawDiamond(ctx, cx - half + 8, y, 3, color);
-  drawDiamond(ctx, cx + half - 8, y, 3, color);
-  ctx.restore();
-}
-
-function drawCornerOrnaments(ctx, W, H) {
-  const color = 'rgba(60, 50, 35, 0.22)';
-  const size = 30;
-  const pad = 60;
-
-  // 4 زوايا صغيرة
-  const corners = [
-    { x: pad, y: pad, sx: 1, sy: 1 },          // top-left
-    { x: W - pad, y: pad, sx: -1, sy: 1 },     // top-right
-    { x: pad, y: H - pad, sx: 1, sy: -1 },     // bottom-left
-    { x: W - pad, y: H - pad, sx: -1, sy: -1 },// bottom-right
-  ];
-
-  ctx.save();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2.5;
-  for (const c of corners) {
-    // خط أفقي
-    ctx.beginPath();
-    ctx.moveTo(c.x, c.y);
-    ctx.lineTo(c.x + size * c.sx, c.y);
-    ctx.stroke();
-    // خط عمودي
-    ctx.beginPath();
-    ctx.moveTo(c.x, c.y);
-    ctx.lineTo(c.x, c.y + size * c.sy);
-    ctx.stroke();
-    // نقطة صغيرة عند التقاء
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(c.x + 6 * c.sx, c.y + 6 * c.sy, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-// ============== توليد الصورة (المحسّن) ==============
-async function generateQuoteImage(rawText, bookName, authorName) {
-  // 1) إزالة رقم الصفحة من نص الصورة
-  let text = rawText.replace(/\s*\[صفحة\s*\d+\]\s*/g, ' ');
-  // إزالة الأقواس المربعة الفارغة إن بقيت
-  text = text.replace(/\[\s*\]/g, '');
-  // تنظيف مسافات زائدة
-  text = text.replace(/\s+/g, ' ').trim();
-
-  const W = 1080, H = 1350;
-  const canvas = document.createElement('canvas');
-  canvas.width = W;
-  canvas.height = H;
-  const ctx = canvas.getContext('2d');
-
-  // ===== 1) الخلفية الكريمية =====
-  ctx.fillStyle = '#fdfaf2';
-  ctx.fillRect(0, 0, W, H);
-
-  // ===== 2) البروز الداخلي =====
-  const edge = 130;
-  const shadowColor = '60, 50, 35';
-  let g = ctx.createLinearGradient(0, 0, 0, edge);
-  g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
-  g.addColorStop(1, `rgba(${shadowColor}, 0)`);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, edge);
-
-  g = ctx.createLinearGradient(0, H, 0, H - edge);
-  g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
-  g.addColorStop(1, `rgba(${shadowColor}, 0)`);
-  ctx.fillStyle = g; ctx.fillRect(0, H - edge, W, edge);
-
-  g = ctx.createLinearGradient(W, 0, W - edge, 0);
-  g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
-  g.addColorStop(1, `rgba(${shadowColor}, 0)`);
-  ctx.fillStyle = g; ctx.fillRect(W - edge, 0, edge, H);
-
-  g = ctx.createLinearGradient(0, 0, edge, 0);
-  g.addColorStop(0, `rgba(${shadowColor}, 0.12)`);
-  g.addColorStop(1, `rgba(${shadowColor}, 0)`);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, edge, H);
-
-  // ===== 3) الإطار الخارجي =====
-  ctx.strokeStyle = 'rgba(60, 50, 35, 0.18)';
-  ctx.lineWidth = 3;
-  ctx.strokeRect(28, 28, W - 56, H - 56);
-
-  // ===== 4) زوايا زخرفية =====
-  drawCornerOrnaments(ctx, W, H);
-
-  // ===== 5) علامة الاقتباس (أعلى يسار) =====
-  ctx.direction = 'ltr';
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = '#2b6cb0';
-  ctx.font = 'bold 200px -apple-system, "SF Arabic", system-ui, sans-serif';
-  ctx.fillText('\u201C', 60, 20);
-
-  // ===== 6) فاصل زخرفي تحت علامة الاقتباس =====
-  drawOrnamentDivider(ctx, W / 2, 260, 260, 'rgba(43, 108, 176, 0.55)');
-
-  // ===== 7) حساب حجم الخط المتكيّف =====
-  let fontSize = 64;
-  if (text.length > 180) fontSize = 58;
-  if (text.length > 280) fontSize = 52;
-  if (text.length > 380) fontSize = 46;
-  if (text.length > 480) fontSize = 42;
-
-  const lineHeight = Math.round(fontSize * 1.7);
-  ctx.direction = 'rtl';
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  ctx.fillStyle = '#1a1a1a';
-  ctx.font = `${fontSize}px -apple-system, "SF Arabic", system-ui, sans-serif`;
-
-  const maxWidth = W - 200;
-  const lines = wrapTextArabic(ctx, text, maxWidth);
-
-  // ===== 8) التوسيط العمودي =====
-  // نطاق النص: من y=320 إلى y=H-360
-  const textTop = 330;
-  const textBottom = H - 360;
-  const totalTextHeight = lines.length * lineHeight;
-  const availableHeight = textBottom - textTop;
-  const startY = textTop + Math.max(0, (availableHeight - totalTextHeight) / 2);
-
-  let y = startY;
-  for (const line of lines) {
-    if (y + lineHeight > textBottom + lineHeight) break;
-    ctx.fillText(line, W - 100, y);
-    y += lineHeight;
-  }
-
-  // ===== 9) فاصل زخرفي أسفل الاقتباس =====
-  const bottomDividerY = Math.max(y + 40, H - 320);
-  drawOrnamentDivider(ctx, W / 2, bottomDividerY, 200, 'rgba(60, 50, 35, 0.28)');
-
-  // ===== 10) الكتاب والمؤلف (أسفل يسار) =====
-  ctx.textAlign = 'left';
-  ctx.direction = 'rtl';
-
-  if (bookName) {
-    ctx.fillStyle = '#4a5568';
-    ctx.font = 'bold 28px -apple-system, "SF Arabic", system-ui, sans-serif';
-    ctx.fillText('📖 ' + bookName, 90, H - 200);
-  }
-
-  if (authorName) {
-    ctx.fillStyle = '#718096';
-    ctx.font = '24px -apple-system, "SF Arabic", system-ui, sans-serif';
-    ctx.fillText('✍ ' + authorName, 90, H - 155);
-  }
-
-  // ===== 11) العلامة المائية =====
-  ctx.save();
-  ctx.globalAlpha = 0.07;
-  ctx.fillStyle = '#000';
-  ctx.font = 'bold 34px -apple-system, system-ui, sans-serif';
-  ctx.direction = 'ltr';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-
-  const watermarkPositions = [
-    { x: W * 0.25, y: H * 0.22, rot: -22 },
-    { x: W * 0.75, y: H * 0.42, rot: -22 },
-    { x: W * 0.28, y: H * 0.62, rot: -22 },
-    { x: W * 0.72, y: H * 0.82, rot: -22 },
-  ];
-
-  for (const p of watermarkPositions) {
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.rot * Math.PI / 180);
-    ctx.fillText('تصميم / sab3-77', 0, 0);
-    ctx.restore();
-  }
-  ctx.restore();
-
-  return new Promise(resolve => {
-    canvas.toBlob(blob => resolve(blob), 'image/png');
-  });
-}
-
-function wrapTextArabic(ctx, text, maxWidth) {
+function wrapText(ctx, text, maxWidth) {
   const lines = [];
-  const paragraphs = text.split('\n');
-  for (const para of paragraphs) {
+  for (const para of text.split('\n')) {
     if (!para.trim()) { lines.push(''); continue; }
     const words = para.split(/\s+/);
     let current = '';
     for (const word of words) {
       const test = current ? current + ' ' + word : word;
-      const w = ctx.measureText(test).width;
-      if (w > maxWidth && current) {
-        lines.push(current);
-        current = word;
-      } else {
-        current = test;
-      }
+      if (ctx.measureText(test).width > maxWidth && current) {
+        lines.push(current); current = word;
+      } else current = test;
     }
     if (current) lines.push(current);
   }
   return lines;
 }
 
-// ============== عرض البطاقات ==============
-function renderQuotes() {
-  const container = document.getElementById('quotes');
-  container.innerHTML = '';
-  if (!state.quotes.length) return;
-
-  const header = document.createElement('div');
-  header.style.cssText = 'font-size:13px;color:#4a5568;text-align:right;padding:8px;margin-bottom:8px;line-height:1.7;';
-  header.textContent = state.currentHeader;
-  container.appendChild(header);
-
-  state.quotes.forEach((quote, i) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const isFav = isFavorite(quote, state.pdfName);
-    card.innerHTML = `
-      <div class="card-head">
-        <button class="star ${isFav ? 'on' : ''}" data-idx="${i}">${isFav ? '★' : '☆'}</button>
-        <span class="q-num">❝ اقتباس ${i + 1}</span>
-      </div>
-      <div class="q-text">${escapeHtml(quote)}</div>
-      <div class="card-actions">
-        <button class="btn btn-green" data-action="copy" data-idx="${i}">📋 نسخ</button>
-        <button class="btn btn-blue" data-action="share" data-idx="${i}">📤 مشاركة</button>
-        <button class="btn btn-purple" data-action="image" data-idx="${i}">📸 صورة</button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-
-  container.querySelectorAll('.star').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.idx);
-      toggleFavorite(state.quotes[idx], state.pdfName);
-      renderQuotes();
-    });
-  });
-
-  container.querySelectorAll('[data-action]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.idx);
-      const action = btn.dataset.action;
-      const text = state.quotes[idx];
-      if (action === 'copy') copyQuote(text);
-      else if (action === 'share') shareQuote(text);
-      else if (action === 'image') showQuoteImage(text);
-    });
-  });
+function adaptiveFontSize(len, base, min) {
+  if (len < 80) return base;
+  if (len < 140) return base - 4;
+  if (len < 220) return base - 10;
+  if (len < 320) return base - 16;
+  if (len < 420) return base - 22;
+  return min;
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
+function drawDiamond(ctx, cx, cy, size, color) {
+  ctx.save(); ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - size); ctx.lineTo(cx + size, cy);
+  ctx.lineTo(cx, cy + size); ctx.lineTo(cx - size, cy);
+  ctx.closePath(); ctx.fill(); ctx.restore();
 }
 
-async function copyQuote(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast('✅ تم نسخ الاقتباس');
-  } catch (e) { toast('❌ فشل النسخ'); }
+function drawOrnamentLine(ctx, cx, y, width, color, withDiamond) {
+  const half = width / 2;
+  ctx.save();
+  ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cx - half, y); ctx.lineTo(cx - 15, y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 15, y); ctx.lineTo(cx + half, y); ctx.stroke();
+  if (withDiamond) drawDiamond(ctx, cx, y, 6, color);
+  drawDiamond(ctx, cx - half - 6, y, 3, color);
+  drawDiamond(ctx, cx + half + 6, y, 3, color);
+  ctx.restore();
 }
 
-async function shareQuote(text) {
-  if (navigator.share) {
-    try { await navigator.share({ text: text }); }
-    catch (e) { if (e.name !== 'AbortError') copyQuote(text); }
-  } else copyQuote(text);
+// زخرفة إسلامية: نجمة ثمانية
+function drawKhatim(ctx, cx, cy, size) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.beginPath();
+  ctx.moveTo(-size, -size); ctx.lineTo(size, -size);
+  ctx.lineTo(size, size); ctx.lineTo(-size, size); ctx.closePath();
+  ctx.stroke();
+  ctx.rotate(Math.PI / 4);
+  ctx.beginPath();
+  ctx.moveTo(-size, -size); ctx.lineTo(size, -size);
+  ctx.lineTo(size, size); ctx.lineTo(-size, size); ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
 }
 
-async function showQuoteImage(text) {
+function drawIslamicPattern(ctx, W, H, color, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.2;
+  const spacing = 90;
+  for (let y = -spacing; y < H + spacing; y += spacing) {
+    for (let x = -spacing; x < W + spacing; x += spacing) {
+      drawKhatim(ctx, x, y, 26);
+      drawKhatim(ctx, x + spacing/2, y + spacing/2, 26);
+    }
+  }
+  ctx.restore();
+}
+
+// ============== النمط 1: كلاسيكي فاخر ==============
+function drawClassic(ctx, W, H, text, bookName, authorName) {
+  // خلفية بتدرج بيج-ذهبي
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#f7efdd');
+  bg.addColorStop(0.5, '#f2e6cd');
+  bg.addColorStop(1, '#e9d8b5');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // Vignette بني خفيف
+  const vg = ctx.createRadialGradient(W/2, H/2, W*0.35, W/2, H/2, W*0.85);
+  vg.addColorStop(0, 'rgba(255,248,232,0.45)');
+  vg.addColorStop(1, 'rgba(120,90,50,0.18)');
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+  // إطار خارجي ذهبي
+  ctx.strokeStyle = '#b8945a'; ctx.lineWidth = 4;
+  ctx.strokeRect(40, 40, W - 80, H - 80);
+
+  // إطار داخلي رقيق
+  ctx.strokeStyle = 'rgba(184,148,90,0.55)'; ctx.lineWidth = 1;
+  ctx.strokeRect(60, 60, W - 120, H - 120);
+
+  // معينات الزوايا
+  const gold = '#b8945a';
+  drawDiamond(ctx, 60, 60, 6, gold);
+  drawDiamond(ctx, W-60, 60, 6, gold);
+  drawDiamond(ctx, 60, H-60, 6, gold);
+  drawDiamond(ctx, W-60, H-60, 6, gold);
+
+  // علامة الاقتباس - ذهبية كبيرة
+  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(30, 58, 95, 0.85)';
+  ctx.font = 'bold 220px Georgia, "Times New Roman", serif';
+  ctx.fillText('\u201C', 80, 0);
+
+  // فاصل زخرفي أعلى
+  drawOrnamentLine(ctx, W/2, 250, 280, 'rgba(184,148,90,0.75)', true);
+
+  // النص
+  const len = text.length;
+  const fontSize = adaptiveFontSize(len, 68, 42);
+  const lineHeight = Math.round(fontSize * 1.65);
+  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#2a1f14';
+  ctx.font = `bold ${fontSize}px Georgia, "SF Arabic", "Times New Roman", serif`;
+  const maxWidth = W - 220;
+  const lines = wrapText(ctx, text, maxWidth);
+
+  const topY = 330;
+  const bottomY = H - 340;
+  const totalH = lines.length * lineHeight;
+  let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
+
+  for (const line of lines) {
+    if (y + lineHeight > bottomY + lineHeight) break;
+    ctx.fillText(line, W - 110, y);
+    y += lineHeight;
+  }
+
+  // فاصل زخرفي أسفل
+  const dividerY = Math.min(y + 50, H - 300);
+  drawOrnamentLine(ctx, W/2, dividerY, 220, 'rgba(184,148,90,0.55)', true);
+
+  // الكتاب والمؤلف
+  ctx.textAlign = 'center'; ctx.direction = 'rtl';
+  if (bookName) {
+    ctx.fillStyle = '#5c4a2f';
+    ctx.font = 'bold 30px Georgia, "SF Arabic", serif';
+    ctx.fillText('📖 ' + bookName, W/2, H - 240);
+  }
+  if (authorName) {
+    ctx.fillStyle = '#8a7a5f';
+    ctx.font = 'italic 24px Georgia, "SF Arabic", serif';
+    ctx.fillText('✍ ' + authorName, W/2, H - 195);
+  }
+
+  // توقيع زاوية واحدة (بدل watermark مكرر)
+  ctx.save();
+  ctx.globalAlpha = 0.35;
+  ctx.fillStyle = '#b8945a';
+  ctx.font = '18px Georgia, serif';
+  ctx.textAlign = 'right'; ctx.direction = 'ltr';
+  ctx.fillText('sab3-77', W - 70, H - 70);
+  ctx.restore();
+}
+
+// ============== النمط 2: حديث بسيط ==============
+function drawModern(ctx, W, H, text, bookName, authorName) {
+  // خلفية بيضاء نقية
+  ctx.fillStyle = '#fefefe'; ctx.fillRect(0, 0, W, H);
+
+  const accent = '#0f172a';
+  const accentColor = '#2b6cb0';
+
+  // شريط جانبي رفيع (يسار)
+  ctx.fillStyle = accent;
+  ctx.fillRect(0, 0, 14, H);
+
+  // شريط ثانوي
+  ctx.fillStyle = accentColor;
+  ctx.fillRect(14, 0, 6, H);
+
+  // علامة اقتباس حديثة
+  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = accent;
+  ctx.font = 'bold 260px -apple-system, system-ui, sans-serif';
+  ctx.fillText('\u201C', 50, -30);
+
+  // النص
+  const len = text.length;
+  const fontSize = adaptiveFontSize(len, 74, 46);
+  const lineHeight = Math.round(fontSize * 1.55);
+  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = accent;
+  ctx.font = `800 ${fontSize}px -apple-system, "SF Arabic", system-ui, sans-serif`;
+  const maxWidth = W - 200;
+  const lines = wrapText(ctx, text, maxWidth);
+
+  const topY = 320;
+  const bottomY = H - 300;
+  const totalH = lines.length * lineHeight;
+  let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
+
+  for (const line of lines) {
+    if (y + lineHeight > bottomY + lineHeight) break;
+    ctx.fillText(line, W - 100, y);
+    y += lineHeight;
+  }
+
+  // خط أفقي فاصل
+  const lineY = Math.min(y + 70, H - 250);
+  ctx.strokeStyle = accent; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(80, lineY); ctx.lineTo(W - 100, lineY);
+  ctx.stroke();
+
+  // نقطة ملونة على بداية الخط
+  ctx.fillStyle = accentColor;
+  ctx.beginPath(); ctx.arc(W - 100, lineY, 8, 0, Math.PI * 2); ctx.fill();
+
+  // الكتاب والمؤلف
+  ctx.textAlign = 'left'; ctx.direction = 'rtl';
+  if (bookName) {
+    ctx.fillStyle = accent;
+    ctx.font = 'bold 28px -apple-system, "SF Arabic", system-ui, sans-serif';
+    ctx.fillText(bookName, 100, lineY + 30);
+  }
+  if (authorName) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '22px -apple-system, "SF Arabic", system-ui, sans-serif';
+    ctx.fillText('✍ ' + authorName, 100, lineY + 80);
+  }
+
+  // توقيع دقيق جداً
+  ctx.save();
+  ctx.globalAlpha = 0.3;
+  ctx.fillStyle = accent;
+  ctx.font = '16px -apple-system, system-ui, sans-serif';
+  ctx.textAlign = 'right'; ctx.direction = 'ltr';
+  ctx.fillText('design by sab3-77', W - 30, H - 30);
+  ctx.restore();
+}
+
+// ============== النمط 3: شرقي مزخرف ==============
+function drawOriental(ctx, W, H, text, bookName, authorName) {
+  // خلفية كحلية داكنة
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#14213d');
+  bg.addColorStop(0.5, '#1a2b4a');
+  bg.addColorStop(1, '#0d1b2f');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  // زخرفة إسلامية ذهبية باهتة
+  drawIslamicPattern(ctx, W, H, '#c9a961', 0.07);
+
+  // إطار ذهبي مزدوج
+  ctx.strokeStyle = 'rgba(201,169,97,0.9)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(50, 50, W - 100, H - 100);
+
+  ctx.strokeStyle = 'rgba(201,169,97,0.35)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(70, 70, W - 140, H - 140);
+
+  // زخارف الزوايا (نجمة صغيرة)
+  const corners = [[70,70],[W-70,70],[70,H-70],[W-70,H-70]];
+  for (const [cx, cy] of corners) {
+    ctx.save();
+    ctx.strokeStyle = '#c9a961';
+    ctx.lineWidth = 2;
+    drawKhatim(ctx, cx, cy, 10);
+    ctx.restore();
+  }
+
+  // علامة الاقتباس ذهبية
+  ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.fillStyle = 'rgba(201,169,97,0.9)';
+  ctx.font = 'bold 220px Georgia, "Times New Roman", serif';
+  ctx.fillText('\u201C', 80, 10);
+
+  // فاصل أعلى
+  drawOrnamentLine(ctx, W/2, 260, 300, 'rgba(201,169,97,0.75)', true);
+
+  // النص
+  const len = text.length;
+  const fontSize = adaptiveFontSize(len, 66, 42);
+  const lineHeight = Math.round(fontSize * 1.7);
+  ctx.direction = 'rtl'; ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#f5ecd9';
+  ctx.font = `500 ${fontSize}px Georgia, "SF Arabic", serif`;
+  const maxWidth = W - 220;
+  const lines = wrapText(ctx, text, maxWidth);
+
+  const topY = 340;
+  const bottomY = H - 340;
+  const totalH = lines.length * lineHeight;
+  let y = topY + Math.max(0, (bottomY - topY - totalH) / 2);
+
+  for (const line of lines) {
+    if (y + lineHeight > bottomY + lineHeight) break;
+    ctx.fillText(line, W - 110, y);
+    y += lineHeight;
+  }
+
+  // فاصل أسفل
+  const dividerY = Math.min(y + 50, H - 300);
+  drawOrnamentLine(ctx, W/2, dividerY, 220, 'rgba(201,169,97,0.6)', true);
+
+  // الكتاب والمؤلف
+  ctx.textAlign = 'center'; ctx.direction = 'rtl';
+  if (bookName) {
+    ctx.fillStyle = '#e8d5a8';
+    ctx.font = 'bold 30px Georgia, "SF Arabic", serif';
+    ctx.fillText('📖 ' + bookName, W/2, H - 235);
+  }
+  if (authorName) {
+    ctx.fillStyle = '#c9a961';
+    ctx.font = 'italic 24px Georgia, "SF Arabic", serif';
+    ctx.fillText('✍ ' + authorName, W/2, H - 190);
+  }
+
+  // توقيع ذهبي
+  ctx.save();
+  ctx.globalAlpha = 0.55;
+  ctx.fillStyle = '#c9a961';
+  ctx.font = '18px Georgia, serif';
+  ctx.textAlign = 'right'; ctx.direction = 'ltr';
+  ctx.fillText('sab3-77', W - 80, H - 75);
+  ctx.restore();
+}
+
+// ============== توليد الصورة ==============
+async function generateQuoteImage(rawText, bookName, authorName, style) {
+  const text = stripPageNumbers(rawText);
+  const W = 1080, H = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  if (style === 'modern') {
+    drawModern(ctx, W, H, text, bookName, authorName);
+  } else if (style === 'oriental') {
+    drawOriental(ctx, W, H, text, bookName, authorName);
+  } else {
+    drawClassic(ctx, W, H, text, bookName, authorName);
+  }
+
+  return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
+}
+
+async function showQuoteImage(text, style) {
   setStatus('جاري توليد الصورة...');
   try {
-    const blob = await generateQuoteImage(text, state.pdfName, state.authorName);
+    state.currentImageText = text;
+    const useStyle = style || state.imageStyle;
+    const blob = await generateQuoteImage(text, state.pdfName, state.authorName, useStyle);
+    state.currentImageBlob = blob;
     const url = URL.createObjectURL(blob);
     document.getElementById('previewImg').src = url;
     document.getElementById('imgPreview').classList.remove('hidden');
     document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
+    // تحديث حالة chips
+    document.querySelectorAll('.style-chip').forEach(c => {
+      c.classList.toggle('active', c.dataset.style === useStyle);
+    });
     setStatus('تم توليد الصورة ✨', 'ok');
   } catch (e) {
     setStatus('فشل توليد الصورة', 'err');
@@ -696,69 +720,44 @@ async function shareImage(blob) {
   } else {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url;
-    a.download = 'quote.png';
-    a.click();
+    a.href = url; a.download = 'quote.png'; a.click();
     toast('تم تحميل الصورة');
   }
 }
 
-function findQuote(text, book) {
-  return state.library.find(q => q.text === text && q.book === book);
-}
-
-function isFavorite(text, book) {
-  const q = findQuote(text, book);
-  return !!(q && q.favorite);
-}
-
+// ============== المكتبة ==============
+function findQuote(text, book) { return state.library.find(q => q.text === text && q.book === book); }
+function isFavorite(text, book) { const q = findQuote(text, book); return !!(q && q.favorite); }
 function ensureInLibrary(text, book) {
   let q = findQuote(text, book);
   if (!q) {
     q = {
       id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-      text: text,
-      book: book,
-      favorite: false,
-      date: new Date().toISOString(),
+      text, book, favorite: false, date: new Date().toISOString(),
     };
-    state.library.push(q);
-    saveLibrary();
+    state.library.push(q); saveLibrary();
   }
   return q;
 }
-
 function toggleFavorite(text, book) {
   const q = ensureInLibrary(text, book);
-  q.favorite = !q.favorite;
-  saveLibrary();
+  q.favorite = !q.favorite; saveLibrary();
 }
-
-function openLibrary() {
-  document.getElementById('library').classList.remove('hidden');
-  renderLibrary('all');
-}
-
-function closeLibrary() {
-  document.getElementById('library').classList.add('hidden');
-}
+function openLibrary() { document.getElementById('library').classList.remove('hidden'); renderLibrary('all'); }
+function closeLibrary() { document.getElementById('library').classList.add('hidden'); }
 
 function renderLibrary(filter) {
   const list = document.getElementById('libList');
   list.innerHTML = '';
-  let items = filter === 'fav'
-    ? state.library.filter(q => q.favorite)
-    : [...state.library];
+  let items = filter === 'fav' ? state.library.filter(q => q.favorite) : [...state.library];
   items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   document.getElementById('libCount').textContent = items.length + ' اقتباس';
   document.getElementById('filterAll').className = 'btn ' + (filter === 'all' ? 'btn-purple' : 'btn-gray');
   document.getElementById('filterFav').className = 'btn ' + (filter === 'fav' ? 'btn-purple' : 'btn-gray');
-
   if (!items.length) {
     list.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:30px;">لا توجد اقتباسات بعد</div>';
     return;
   }
-
   items.forEach(q => {
     const card = document.createElement('div');
     card.className = 'card';
@@ -771,126 +770,164 @@ function renderLibrary(filter) {
       <div class="q-text">${escapeHtml(q.text)}</div>
       <div class="card-actions">
         <button class="btn btn-green" data-act="copy">📋 نسخ</button>
-        <button class="btn btn-blue" data-act="share">📤 مشاركة</button>
-        <button class="btn btn-purple" data-act="image">📸 صورة</button>
+        <button class="btn btn-blue" data-act="share">📤</button>
+        <button class="btn btn-purple" data-act="image">📸</button>
         <button class="btn btn-red" data-act="del">🗑</button>
-      </div>
-    `;
+      </div>`;
     card.querySelector('.star').addEventListener('click', () => {
-      q.favorite = !q.favorite;
-      saveLibrary();
-      renderLibrary(filter);
+      q.favorite = !q.favorite; saveLibrary(); renderLibrary(filter);
     });
     card.querySelector('[data-act="copy"]').addEventListener('click', () => copyQuote(q.text));
     card.querySelector('[data-act="share"]').addEventListener('click', () => shareQuote(q.text));
     card.querySelector('[data-act="image"]').addEventListener('click', () => showQuoteImage(q.text));
     card.querySelector('[data-act="del"]').addEventListener('click', () => {
-      if (confirm('حذف هذا الاقتباس؟')) {
+      if (confirm('حذف؟')) {
         state.library = state.library.filter(x => x.id !== q.id);
-        saveLibrary();
-        renderLibrary(filter);
+        saveLibrary(); renderLibrary(filter);
       }
     });
     list.appendChild(card);
   });
 }
 
+// ============== عرض البطاقات ==============
+function renderQuotes() {
+  const container = document.getElementById('quotes');
+  container.innerHTML = '';
+  if (!state.quotes.length) return;
+  const header = document.createElement('div');
+  header.style.cssText = 'font-size:13px;color:#4a5568;text-align:right;padding:8px;margin-bottom:8px;line-height:1.7;';
+  header.textContent = state.currentHeader;
+  container.appendChild(header);
+  state.quotes.forEach((quote, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const isFav = isFavorite(quote, state.pdfName);
+    card.innerHTML = `
+      <div class="card-head">
+        <button class="star ${isFav ? 'on' : ''}" data-idx="${i}">${isFav ? '★' : '☆'}</button>
+        <span class="q-num">❝ اقتباس ${i + 1}</span>
+      </div>
+      <div class="q-text">${escapeHtml(quote)}</div>
+      <div class="card-actions">
+        <button class="btn btn-green" data-action="copy" data-idx="${i}">📋 نسخ</button>
+        <button class="btn btn-blue" data-action="share" data-idx="${i}">📤 مشاركة</button>
+        <button class="btn btn-purple" data-action="image" data-idx="${i}">📸 صورة</button>
+      </div>`;
+    container.appendChild(card);
+  });
+  container.querySelectorAll('.star').forEach(b => b.addEventListener('click', () => {
+    toggleFavorite(state.quotes[parseInt(b.dataset.idx)], state.pdfName); renderQuotes();
+  }));
+  container.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', () => {
+    const idx = parseInt(b.dataset.idx);
+    const t = state.quotes[idx];
+    if (b.dataset.action === 'copy') copyQuote(t);
+    else if (b.dataset.action === 'share') shareQuote(t);
+    else showQuoteImage(t);
+  }));
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+async function copyQuote(text) {
+  try { await navigator.clipboard.writeText(text); toast('✅ تم النسخ'); }
+  catch (e) { toast('❌ فشل النسخ'); }
+}
+async function shareQuote(text) {
+  if (navigator.share) {
+    try { await navigator.share({ text }); }
+    catch (e) { if (e.name !== 'AbortError') copyQuote(text); }
+  } else copyQuote(text);
+}
+
+// ============== الاستخراج ==============
 async function generate() {
   if (state.busy) return;
   const apiKey = document.getElementById('apiKey').value.trim();
   if (!apiKey) { toast('❌ أدخل مفتاح OpenRouter'); return; }
-  if (!state.pdfFile) { toast('❌ اختر ملف PDF أولاً'); return; }
-
+  if (!state.pdfFile) { toast('❌ اختر PDF أولاً'); return; }
   saveApiKey(apiKey);
   state.busy = true;
   const genBtn = document.getElementById('genBtn');
-  genBtn.disabled = true;
-  genBtn.textContent = '⏳ جاري الاستخراج...';
-
+  genBtn.disabled = true; genBtn.textContent = '⏳ جاري الاستخراج...';
   try {
-    setStatus('جاري قراءة PDF...');
-    showProgress(true, 0);
-
+    setStatus('جاري قراءة PDF...'); showProgress(true, 0);
     const { text } = await extractPdfText(state.pdfFile);
-    let cleaned = cleanPdfText(text);
-    cleaned = truncateAtLine(cleaned, 12000);
-
-    if (!cleaned.trim()) {
-      setStatus('لم يُعثر على نص في PDF', 'err');
-      toast('❌ الملف قد يكون صوراً ممسوحة');
-      return;
-    }
-
+    let cleaned = truncateAtLine(cleanPdfText(text), 12000);
+    if (!cleaned.trim()) { setStatus('لم يُعثر على نص', 'err'); return; }
     setStatus('جاري الاتصال بالنموذج...');
-    const { text: answer, model } = await callOpenRouter(
-      apiKey, state.pdfName, cleaned, state.quoteCount
-    );
-
+    const { text: answer, model } = await callOpenRouter(apiKey, state.pdfName, cleaned, state.quoteCount);
     const quotes = parseQuotes(answer);
     state.quotes = quotes;
     state.currentHeader = '📕 ' + state.pdfName + '\n🤖 ' + model.split('/').pop();
-
     quotes.forEach(q => ensureInLibrary(q, state.pdfName));
-
     renderQuotes();
-    setStatus(`✓ ${quotes.length} اقتباسات — اضغط مجدداً للمزيد`, 'ok');
+    setStatus(`✓ ${quotes.length} اقتباسات — اضغط مجدداً`, 'ok');
     genBtn.textContent = '🔄 اقتباسات جديدة';
   } catch (e) {
-    console.error(e);
     setStatus('حدث خطأ', 'err');
     document.getElementById('quotes').innerHTML =
       '<div class="card" style="color:#c53030;text-align:center;padding:20px;">حدث خطأ:<br><br>' +
       escapeHtml(e.message) + '</div>';
   } finally {
-    state.busy = false;
-    genBtn.disabled = false;
-    showProgress(false);
+    state.busy = false; genBtn.disabled = false; showProgress(false);
   }
 }
 
+// ============== الأحداث ==============
 document.addEventListener('DOMContentLoaded', () => {
-  loadLibrary();
-  loadApiKey();
+  loadLibrary(); loadApiKey();
 
-  document.getElementById('pickPdfBtn').addEventListener('click', () => {
-    document.getElementById('pdfInput').click();
-  });
-
+  document.getElementById('pickPdfBtn').addEventListener('click', () => document.getElementById('pdfInput').click());
   document.getElementById('pdfInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    state.pdfFile = file;
-    state.pdfName = file.name;
+    const f = e.target.files[0]; if (!f) return;
+    state.pdfFile = f; state.pdfName = f.name;
     if (!document.getElementById('bookName').value) {
-      document.getElementById('bookName').value = file.name.replace(/\.pdf$/i, '');
-      state.pdfName = file.name.replace(/\.pdf$/i, '');
+      document.getElementById('bookName').value = f.name.replace(/\.pdf$/i, '');
+      state.pdfName = f.name.replace(/\.pdf$/i, '');
     }
-    setStatus('✓ ' + file.name, 'ok');
-    state.quotes = [];
-    document.getElementById('quotes').innerHTML = '';
+    setStatus('✓ ' + f.name, 'ok');
+    state.quotes = []; document.getElementById('quotes').innerHTML = '';
   });
-
   document.getElementById('genBtn').addEventListener('click', generate);
 
   document.getElementById('countBtn').addEventListener('click', function() {
-    const opts = [5, 10, 15];
+    const opts = [5, 10, 15, 20];
     let idx = opts.indexOf(state.quoteCount);
     idx = (idx + 1) % opts.length;
     state.quoteCount = opts[idx];
-    this.textContent = '🔢 ' + state.quoteCount + ' اقتباسات';
+    this.textContent = '🔢 ' + state.quoteCount;
+  });
+
+  document.getElementById('styleBtn').addEventListener('click', function() {
+    const order = ['classic', 'modern', 'oriental'];
+    let i = order.indexOf(state.imageStyle);
+    i = (i + 1) % order.length;
+    state.imageStyle = order[i];
+    saveStyle(state.imageStyle);
+    this.textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
+    toast('النمط: ' + STYLE_NAMES[state.imageStyle]);
   });
 
   document.getElementById('libBtn').addEventListener('click', openLibrary);
   document.getElementById('filterAll').addEventListener('click', () => renderLibrary('all'));
   document.getElementById('filterFav').addEventListener('click', () => renderLibrary('fav'));
 
-  document.getElementById('bookName').addEventListener('input', (e) => {
-    state.pdfName = e.target.value || 'كتاب';
+  document.getElementById('bookName').addEventListener('input', e => state.pdfName = e.target.value || 'كتاب');
+  document.getElementById('authorName').addEventListener('input', e => {
+    state.authorName = e.target.value; saveAuthor(e.target.value);
   });
 
-  document.getElementById('authorName').addEventListener('input', (e) => {
-    state.authorName = e.target.value;
-    saveAuthor(e.target.value);
+  // style chips في المعاينة
+  document.querySelectorAll('.style-chip').forEach(chip => {
+    chip.addEventListener('click', async () => {
+      state.imageStyle = chip.dataset.style;
+      saveStyle(state.imageStyle);
+      document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
+      await showQuoteImage(state.currentImageText, state.imageStyle);
+    });
   });
 });
 </script>
