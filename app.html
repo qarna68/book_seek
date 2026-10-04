@@ -15,6 +15,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 body { font-family: -apple-system, 'SF Arabic', system-ui, sans-serif; background: #f8f9fa; color: #1a1a1a; padding: 16px; padding-top: max(16px, env(safe-area-inset-top)); padding-bottom: max(16px, env(safe-area-inset-bottom)); min-height: 100vh; }
 .hidden { display: none !important; }
+#errBanner { position: fixed; top: 0; left: 0; right: 0; background: #c53030; color: #fff; padding: 10px; font-size: 12px; z-index: 9999; display: none; white-space: pre-wrap; max-height: 200px; overflow-y: auto; font-family: monospace; direction: ltr; text-align: left; }
 h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700; }
 .field { width: 100%; padding: 12px 14px; font-size: 14px; border: 1px solid #cbd5e0; border-radius: 10px; background: #fff; margin-bottom: 10px; font-family: inherit; direction: rtl; }
 .field:focus { outline: 2px solid #2b6cb0; border-color: transparent; }
@@ -59,6 +60,8 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 </style>
 </head>
 <body>
+
+<div id="errBanner" onclick="this.style.display='none'">⚠️ خطأ: <span id="errText"></span></div>
 
 <div id="main">
   <h1>✨ استخراج اقتباسات ذكي</h1>
@@ -108,21 +111,41 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 <div id="toast" class="toast"></div>
 
 <script>
+// ✅ عرض أي خطأ مباشرة على الصفحة
+function showErr(msg) {
+  try {
+    document.getElementById('errText').textContent = String(msg).substring(0, 500);
+    document.getElementById('errBanner').style.display = 'block';
+  } catch (e) {}
+}
+window.addEventListener('error', function(ev) {
+  showErr((ev.message || 'unknown') + ' @ ' + (ev.filename || '') + ':' + (ev.lineno || ''));
+});
+window.addEventListener('unhandledrejection', function(ev) {
+  showErr('Promise: ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason));
+});
+
 'use strict';
+
+// ✅ حماية pdfjsLib من الفشل
+let pdfjsReady = false;
+try {
+  if (typeof pdfjsLib !== 'undefined' && pdfjsLib.GlobalWorkerOptions) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    pdfjsReady = true;
+  } else {
+    showErr('pdf.js لم يُحمّل — تحقق من الإنترنت');
+  }
+} catch (e) { showErr('pdfjs init: ' + e.message); }
 
 const STORAGE_KEY = 'quotes_library_v1';
 const API_KEY_STORAGE = 'quotes_api_key';
 const AUTHOR_STORAGE = 'quotes_author';
 const STYLE_STORAGE = 'quotes_style';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
 const STYLE_NAMES = { naskh: '📜 نسخي فاخر', oriental: '🌙 شرقي', classic: '🏛️ كلاسيكي', modern: '⚡ حديث' };
 
-// ✅ قائمة الخطوط العربية (الأولى تُجرَّب أولاً)
-const ARABIC_FONTS = ['Amiri', 'Noto Naskh Arabic', 'Scheherazade New'];
 const ARABIC_FONT_STACK = '"Amiri", "Noto Naskh Arabic", "Scheherazade New", Georgia, serif';
-const ARABIC_FONT_STACK_BOLD = '700 1px "Amiri", "Noto Naskh Arabic", "Scheherazade New", Georgia, serif';
 
 let state = {
   pdfFile: null, pdfText: '', pdfName: '', authorName: '',
@@ -134,48 +157,47 @@ let state = {
 let fontsReady = false;
 let warmupDone = false;
 
-// ✅ تحميل الخطوط + تسخين محرك التشكيل
 async function ensureFonts() {
   if (fontsReady && warmupDone) return;
   try {
-    // 1) انتظر تحميل الخطوط من Google Fonts
-    const tasks = [];
-    for (const f of ARABIC_FONTS) {
-      tasks.push(document.fonts.load(`400 40px "${f}"`).catch(() => null));
-      tasks.push(document.fonts.load(`700 40px "${f}"`).catch(() => null));
-      tasks.push(document.fonts.load(`italic 400 40px "${f}"`).catch(() => null));
+    if (typeof document.fonts === 'undefined' || !document.fonts.load) {
+      fontsReady = true; warmupDone = true;
+      return;
     }
+    const tasks = [
+      document.fonts.load('400 40px Amiri').catch(() => null),
+      document.fonts.load('700 40px Amiri').catch(() => null),
+      document.fonts.load('400 40px "Noto Naskh Arabic"').catch(() => null),
+      document.fonts.load('700 40px "Noto Naskh Arabic"').catch(() => null),
+      document.fonts.load('400 40px "Aref Ruqaa"').catch(() => null),
+      document.fonts.load('700 40px "Aref Ruqaa"').catch(() => null),
+      document.fonts.load('400 40px "Scheherazade New"').catch(() => null),
+    ];
     await Promise.all(tasks);
-    await document.fonts.ready;
+    try { await document.fonts.ready; } catch (e) {}
 
-    // 2) 🔥 تسخين محرك Canvas لضمان تشكيل العربية بشكل صحيح
     if (!warmupDone) {
-      const warmupCanvas = document.createElement('canvas');
-      warmupCanvas.width = 800;
-      warmupCanvas.height = 200;
-      const wctx = warmupCanvas.getContext('2d');
-      wctx.direction = 'rtl';
-      wctx.textAlign = 'right';
-      wctx.textBaseline = 'top';
-      wctx.font = `700 40px ${ARABIC_FONT_STACK}`;
-      // نص اختبار فيه وصلات وتشكيل
-      const testTexts = [
-        'الاستمرارية أهم من الشغف صديقي العزيز',
-        'لا حول ولا قوة إلا بالله',
-        'محمد عبد الله الرحمن الرحيم',
+      const wc = document.createElement('canvas');
+      wc.width = 800; wc.height = 200;
+      const wx = wc.getContext('2d');
+      wx.direction = 'rtl';
+      wx.textAlign = 'right';
+      wx.textBaseline = 'top';
+      wx.font = `700 40px ${ARABIC_FONT_STACK}`;
+      const tests = [
+        'الاستمرارية أهم من الشغف',
         'الحمد لله رب العالمين',
+        'محمد عبد الله الرحمن الرحيم',
       ];
-      for (const t of testTexts) {
-        wctx.fillText(t, 780, 40, 760);
-        wctx.measureText(t);
+      for (const t of tests) {
+        try { wx.fillText(t, 780, 40, 760); } catch (e) {}
+        try { wx.measureText(t); } catch (e) {}
       }
-      // تأخير أمان
-      await new Promise(r => setTimeout(r, 450));
+      await new Promise(r => setTimeout(r, 400));
       warmupDone = true;
     }
-
     fontsReady = true;
-  } catch (e) { console.warn('font load', e); }
+  } catch (e) { console.warn('fonts', e); fontsReady = true; warmupDone = true; }
 }
 
 function loadLibrary() { try { const d = localStorage.getItem(STORAGE_KEY); state.library = d ? JSON.parse(d) : []; } catch (e) { state.library = []; } }
@@ -197,6 +219,7 @@ function saveAuthor(a) { try { localStorage.setItem(AUTHOR_STORAGE, a); } catch 
 function saveStyle(s) { try { localStorage.setItem(STYLE_STORAGE, s); } catch (e) {} }
 
 async function extractPdfText(file) {
+  if (!pdfjsReady) throw new Error('pdf.js لم يُحمّل');
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const totalPages = pdf.numPages;
@@ -391,7 +414,6 @@ function drawOrnamentLine(ctx, cx, y, width, color, withDiamond) {
   ctx.restore();
 }
 
-// ✅ رسم نص عربي بشكل صحيح: يستخدم maxWidth لإجبار المتصفح على التشكيل
 function fillText3D(ctx, text, x, y, color, highlight, shadow, maxWidth) {
   const mw = maxWidth || (ctx.measureText(text).width + 200);
   ctx.save();
@@ -404,7 +426,6 @@ function fillText3D(ctx, text, x, y, color, highlight, shadow, maxWidth) {
   ctx.restore();
 }
 
-// ✅ ضبط سياق الرسم للعربية قبل أي عملية نصية
 function setArabicContext(ctx) {
   ctx.direction = 'rtl';
   ctx.textAlign = 'right';
@@ -476,13 +497,11 @@ function drawNaskh(ctx, W, H, text, bookName, authorName) {
   drawFlourishCorner(ctx, 66, H - 66, 1, -1, cs, gold);
   drawFlourishCorner(ctx, W - 66, H - 66, -1, -1, cs, gold);
 
-  // علامة الاقتباس
   ctx.direction = 'ltr'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillStyle = goldBright;
   ctx.font = 'bold 200px "Aref Ruqaa", Georgia, serif';
   ctx.fillText('\u201C', 90, 15);
 
-  // النص
   const len = text.length;
   const fontSize = adaptiveFontSize(len, 74, 46);
   const lineHeight = Math.round(fontSize * 1.75);
@@ -791,7 +810,7 @@ function isFavorite(text, book) { const q = findQuote(text, book); return !!(q &
 function ensureInLibrary(text, book) {
   let q = findQuote(text, book);
   if (!q) {
-    q = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), text, book, favorite: false, date: new Date().toISOString() };
+    q = { id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()), text, book, favorite: false, date: new Date().toISOString() };
     state.library.push(q); saveLibrary();
   }
   return q;
@@ -913,57 +932,76 @@ async function generate() {
 }
 
 // ============== الأحداث ==============
-document.addEventListener('DOMContentLoaded', async () => {
-  loadLibrary(); loadApiKey();
-  ensureFonts();
+function initApp() {
+  try {
+    loadLibrary(); loadApiKey();
+    // ✅ لا ننتظر الخطوط هنا لتفادي تعليق الواجهة
+    ensureFonts().catch(() => {});
 
-  document.getElementById('pickPdfBtn').addEventListener('click', () => document.getElementById('pdfInput').click());
-  document.getElementById('pdfInput').addEventListener('change', (e) => {
-    const f = e.target.files[0]; if (!f) return;
-    state.pdfFile = f; state.pdfName = f.name;
-    if (!document.getElementById('bookName').value) {
-      document.getElementById('bookName').value = f.name.replace(/\.pdf$/i, '');
-      state.pdfName = f.name.replace(/\.pdf$/i, '');
-    }
-    setStatus('✓ ' + f.name, 'ok');
-    state.quotes = []; document.getElementById('quotes').innerHTML = '';
-  });
-  document.getElementById('genBtn').addEventListener('click', generate);
+    const pickBtn = document.getElementById('pickPdfBtn');
+    const pdfIn = document.getElementById('pdfInput');
+    const genBtn = document.getElementById('genBtn');
+    const countBtn = document.getElementById('countBtn');
+    const styleBtn = document.getElementById('styleBtn');
+    const libBtn = document.getElementById('libBtn');
 
-  document.getElementById('countBtn').addEventListener('click', function() {
-    const opts = [_5, 10, 15, 20NAM];
-    let idx = opts.indexOf(state.quoteCountES);
-    idx = (idx + 1) % opts.length;
-    state.quoteCount = opts[idx];
-    this.textContent = '🔢 ' + state.quoteCount;
-  });
-
-  document.getElementById('styleBtn').addEventListener('click', function() {
-    const order = ['naskh', 'oriental', 'classic', '[modern'];
-    let i = orderstate.indexOf(state.imageStyle);
-    i = (i +.image 1) % order.length;
-    state.imageStyle = order[i];
-    saveStyle(state.imageStyle);
-    this.textContent = '🎨 ' + STYLEStyle].split(' ').slice(1).join(' ');
-    toast('النمط: ' + STYLE_NAMES[state.imageStyle]);
-  });
-
-  document.getElementById('libBtn').addEventListener('click', openLibrary);
-  document.getElementById('filterAll').addEventListener('click', () => renderLibrary('all'));
-  document.getElementById('filterFav').addEventListener('click', () => renderLibrary('fav'));
-
-  document.getElementById('bookName').addEventListener('input', e => state.pdfName = e.target.value || 'كتاب');
-  document.getElementById('authorName').addEventListener('input', e => { state.authorName = e.target.value; saveAuthor(e.target.value); });
-
-  document.querySelectorAll('.style-chip').forEach(chip => {
-    chip.addEventListener('click', async () => {
-      state.imageStyle = chip.dataset.style;
-      saveStyle(state.imageStyle);
-      document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
-      await showQuoteImage(state.currentImageText, state.imageStyle);
+    pickBtn.addEventListener('click', () => pdfIn.click());
+    pdfIn.addEventListener('change', (e) => {
+      const f = e.target.files[0]; if (!f) return;
+      state.pdfFile = f; state.pdfName = f.name;
+      if (!document.getElementById('bookName').value) {
+        document.getElementById('bookName').value = f.name.replace(/\.pdf$/i, '');
+        state.pdfName = f.name.replace(/\.pdf$/i, '');
+      }
+      setStatus('✓ ' + f.name, 'ok');
+      state.quotes = []; document.getElementById('quotes').innerHTML = '';
     });
-  });
-});
+
+    genBtn.addEventListener('click', generate);
+
+    countBtn.addEventListener('click', function() {
+      const opts = [5, 10, 15, 20];
+      let idx = opts.indexOf(state.quoteCount);
+      idx = (idx + 1) % opts.length;
+      state.quoteCount = opts[idx];
+      this.textContent = '🔢 ' + state.quoteCount;
+    });
+
+    styleBtn.addEventListener('click', function() {
+      const order = ['naskh', 'oriental', 'classic', 'modern'];
+      let i = order.indexOf(state.imageStyle);
+      i = (i + 1) % order.length;
+      state.imageStyle = order[i];
+      saveStyle(state.imageStyle);
+      this.textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
+      toast('النمط: ' + STYLE_NAMES[state.imageStyle]);
+    });
+
+    libBtn.addEventListener('click', openLibrary);
+    document.getElementById('filterAll').addEventListener('click', () => renderLibrary('all'));
+    document.getElementById('filterFav').addEventListener('click', () => renderLibrary('fav'));
+
+    document.getElementById('bookName').addEventListener('input', e => state.pdfName = e.target.value || 'كتاب');
+    document.getElementById('authorName').addEventListener('input', e => { state.authorName = e.target.value; saveAuthor(e.target.value); });
+
+    document.querySelectorAll('.style-chip').forEach(chip => {
+      chip.addEventListener('click', async () => {
+        state.imageStyle = chip.dataset.style;
+        saveStyle(state.imageStyle);
+        document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
+        await showQuoteImage(state.currentImageText, state.imageStyle);
+      });
+    });
+  } catch (e) {
+    showErr('init: ' + e.message);
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp);
+} else {
+  initApp();
+}
 </script>
 </body>
 </html>
