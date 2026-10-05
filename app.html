@@ -287,7 +287,6 @@ const MODELS = ['openai/gpt-oss-120b', 'google/gemini-2.5-flash', 'meta-llama/ll
 
 async function callOpenRouter(apiKey, bookName, bookText, count) {
   const seed = Math.floor(Math.random() * 9000) + 1000;
-  // ✅ prompt محدّث: فقرات طويلة (3-5 جمل، 40-90 كلمة)
   const prompt = `أنت مساعد متخصص في استخراج الاقتباسات الفكرية من الكتب العربية.
 
 تعليمات مهمة جداً:
@@ -388,44 +387,62 @@ function wrapArabicText(text, maxWidth, fontSize, fontFamily) {
   return lines;
 }
 
-// ✅ خوارزمية جديدة مصممة للفقرات الطويلة
+// ✅ الخوارزمية المُحسَّنة: عرض آمن + تحقق فعلي من كل سطر
 function computeOptimalLayout(text, W, H, config, variant) {
   const len = text.length;
   const topDivider = config.isModern ? 120 : 340;
   const bottomDivider = config.isModern ? H - 320 : H - 400;
   const availableHeight = bottomDivider - topDivider - 80;
 
-  // النصوص الطويلة تحتاج خط أصغر وأعمدة أعرض
-  // المفتاح: اختر خطًا ينتج 8-14 سطرًا بحد أقصى
-  let fontSize = 60;
-  let maxTextWidth = W - 260;
+  // الحد الأقصى الآمن للعرض (بعيد عن الإطار الداخلي بمقدار 100px من كل جانب)
+  const ABSOLUTE_MAX_WIDTH = W - 400; // = 680px
 
-  // ضبط الخط حسب طول النص
-  if (len < 120) { fontSize = 68; maxTextWidth = W - 320; }
-  else if (len < 180) { fontSize = 60; maxTextWidth = W - 280; }
-  else if (len < 260) { fontSize = 54; maxTextWidth = W - 240; }
-  else if (len < 360) { fontSize = 48; maxTextWidth = W - 220; }
-  else if (len < 480) { fontSize = 44; maxTextWidth = W - 200; }
-  else { fontSize = 40; maxTextWidth = W - 180; }
+  // ابدأ بحجم خط معقول حسب طول النص
+  let fontSize;
+  if (len < 120) fontSize = 70;
+  else if (len < 180) fontSize = 62;
+  else if (len < 260) fontSize = 56;
+  else if (len < 360) fontSize = 50;
+  else if (len < 480) fontSize = 44;
+  else fontSize = 40;
 
+  let maxTextWidth = ABSOLUTE_MAX_WIDTH;
   let lineHeight = Math.round(fontSize * 1.85);
   let lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
 
-  // ضبط تكراري: إذا تجاوز عدد الأسطر الحد، قلل حجم الخط تدريجيًا
+  // ✅ التحقق الفعلي: قياس كل سطر وعرضه الحقيقي
+  function hasAnyOverflow(lns, fs) {
+    for (const ln of lns) {
+      const w = measureSvgTextWidth(ln, fs, 700, variant.font);
+      if (w > ABSOLUTE_MAX_WIDTH + 30) return true;
+    }
+    return false;
+  }
+
+  // حلقة تضمن عدم تجاوز العرض أو الارتفاع
   let safety = 0;
-  while (lines.length * lineHeight > availableHeight && fontSize > 34 && safety < 40) {
+  while (safety < 60) {
+    const tooTall = (lines.length * lineHeight) > availableHeight;
+    const tooWide = hasAnyOverflow(lines, fontSize);
+    if (!tooTall && !tooWide) break;
+
     fontSize -= 2;
     lineHeight = Math.round(fontSize * 1.85);
     lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
     safety++;
+    if (fontSize <= 30) break;
   }
 
-  // إذا كان النص قصير جدًا وكان عدد الأسطر أقل من 3، كبّر الخط
+  // إذا كان النص قصيرًا جدًا وأعطانا أقل من 4 أسطر، كبّر الخط قليلًا
   safety = 0;
-  while (lines.length < 3 && fontSize < 90 && safety < 25) {
-    fontSize += 3;
+  while (lines.length < 4 && fontSize < 90 && safety < 20) {
+    const nextFs = fontSize + 3;
+    const testLines = wrapArabicText(text, maxTextWidth, nextFs, variant.font);
+    if (hasAnyOverflow(testLines, nextFs)) break;
+    if (testLines.length * Math.round(nextFs * 1.85) > availableHeight) break;
+    fontSize = nextFs;
     lineHeight = Math.round(fontSize * 1.85);
-    lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
+    lines = testLines;
     safety++;
   }
 
