@@ -151,7 +151,6 @@ const FONT_FAMILY = "Amiri, 'Noto Naskh Arabic', 'Scheherazade New', Georgia, se
 const FONT_FAMILY_B = "'Aref Ruqaa', Amiri, 'Scheherazade New', Georgia, serif";
 const FONT_FAMILY_C = "'Scheherazade New', Amiri, Georgia, serif";
 
-// ✅ توليد رقم عشوائي متغير لكل مرة
 let variantCounter = 0;
 try { variantCounter = parseInt(localStorage.getItem(VARIANT_STORAGE) || '0', 10); } catch (e) {}
 function nextVariant(total) {
@@ -274,17 +273,12 @@ function truncateAtLine(text, maxChars) {
   return text.substring(0, cut > 0 ? cut : maxChars);
 }
 
-// ✅ تنظيف نص الصورة: حذف [صفحة X] + إزالة علامات الترقيم النهائية + نقطة واحدة
 function prepareQuoteText(text) {
   let t = String(text || '');
-  // احذف علامات الصفحة
   t = t.replace(/\s*\[صفحة\s*\d+\]\s*/g, ' ');
   t = t.replace(/\[\s*\]/g, ' ');
-  // احذف أي علامات ترقيم نهائية
   t = t.replace(/[\s،؛:\.\!\?؟\u060C\u061B\u061F\u066A-\u066D]+$/g, '');
-  // ضغط المسافات
   t = t.replace(/\s+/g, ' ').trim();
-  // أضف نقطة واحدة في النهاية
   if (t.length) t = t + '.';
   return t;
 }
@@ -357,7 +351,7 @@ function measureSvgTextWidth(text, fontSize, fontWeight, fontFamily) {
   _measureText.setAttribute('font-size', String(fontSize));
   _measureText.setAttribute('font-weight', String(fontWeight || 700));
   _measureText.setAttribute('direction', 'rtl');
-  _measureText.setAttribute('text-anchor', 'end');
+  _measureText.setAttribute('text-anchor', 'start');
   _measureText.textContent = text;
   let w = 0;
   try { w = _measureText.getBBox().width; } catch (e) { w = text.length * fontSize * 0.5; }
@@ -420,7 +414,6 @@ function buildDividerSVG(cx, y, width, color) {
   return g;
 }
 
-// ============== بناء SVG للصورة 1080×1920 ==============
 function buildQuoteSVG(opts) {
   const { W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant } = opts;
   const NS = 'xmlns="http://www.w3.org/2000/svg"';
@@ -431,7 +424,6 @@ function buildQuoteSVG(opts) {
 
   let s = `<svg ${NS} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
 
-  // Defs
   s += `<defs>
     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
       ${config.bgColors.map((c, i) => `<stop offset="${(i / (config.bgColors.length - 1) * 100).toFixed(1)}%" stop-color="${c}"/>`).join('')}
@@ -482,27 +474,22 @@ function buildQuoteSVG(opts) {
     s += buildCornerSVG(W - c, H - c, -1, -1, config.cornerSize, config.cornerColor);
   }
 
-  // Quote mark
   s += `<text x="90" y="230" font-family="Aref Ruqaa, Georgia, serif" font-weight="bold" font-size="220" fill="${config.quoteMarkColor}" text-anchor="start">&#8220;</text>`;
 
-  // Top divider
   s += buildDividerSVG(W/2, topDivider, config.topDividerWidth || 300, config.ornamentColor);
 
-  // Text - 3 passes
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
     const baselineY = startY + i * lineHeight + fontSize * 0.85;
-    const common = `font-family="${font}" font-weight="700" font-size="${fontSize}" text-anchor="end" direction="rtl"`;
+    const common = `font-family="${font}" font-weight="700" font-size="${fontSize}" text-anchor="start" direction="rtl"`;
     s += `<text x="${W - 100 + 2}" y="${baselineY + 3}" ${common} fill="${textShadow}">${escapeXml(line)}</text>`;
     s += `<text x="${W - 100 - 1}" y="${baselineY - 1}" ${common} fill="${textHighlight}">${escapeXml(line)}</text>`;
     s += `<text x="${W - 100}" y="${baselineY}" ${common} fill="${textColor}">${escapeXml(line)}</text>`;
   }
 
-  // Bottom divider
   s += buildDividerSVG(W/2, bottomDivider, config.bottomDividerWidth || 240, config.ornamentColor);
 
-  // Book
   if (bookName) {
     const bookText = '\u{1F4D6} \uFD3F ' + bookName + ' \uFD3E';
     s += `<text x="${W/2}" y="${H - 200}" font-family="${FONT_FAMILY}" font-weight="700" font-size="36" fill="${config.bookColor}" text-anchor="middle" direction="rtl">${escapeXml(bookText)}</text>`;
@@ -512,7 +499,6 @@ function buildQuoteSVG(opts) {
     s += `<text x="${W/2}" y="${H - 150}" font-family="${FONT_FAMILY}" font-weight="400" font-style="italic" font-size="28" fill="${config.authorColor}" text-anchor="middle" direction="rtl">${escapeXml(authorText)}</text>`;
   }
 
-  // Watermark
   const wmPositions = [
     { x: W * 0.25, y: H * 0.16 },
     { x: W * 0.75, y: H * 0.34 },
@@ -527,7 +513,6 @@ function buildQuoteSVG(opts) {
   return s;
 }
 
-// ============== إعدادات الأنماط مع Variants ==============
 const STYLE_CONFIGS = {
   naskh: {
     bgColors: ['#0a1a30', '#0f2542', '#071224'],
@@ -606,11 +591,10 @@ const STYLE_CONFIGS = {
   },
 };
 
-// ============== توليد الصورة ==============
 async function generateQuoteImage(rawText, bookName, authorName, style, forceVariantIdx) {
   await ensureFonts();
   const text = prepareQuoteText(rawText);
-  const W = 1080, H = 1920; // ✅ 9:16 vertical
+  const W = 1080, H = 1920;
   const config = STYLE_CONFIGS[style] || STYLE_CONFIGS.naskh;
   const totalVariants = config.variants.length;
   const variant = (typeof forceVariantIdx === 'number')
@@ -650,7 +634,7 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]; if (!line) continue;
       const y = modernStartY + i * modernLH + fontSize * 0.85;
-      svg += `<text x="${W - 100}" y="${y}" font-family="${variant.font}" font-weight="800" font-size="${fontSize}" fill="${variant.textColor}" text-anchor="end" direction="rtl">${escapeXml(line)}</text>`;
+      svg += `<text x="${W - 100}" y="${y}" font-family="${variant.font}" font-weight="800" font-size="${fontSize}" fill="${variant.textColor}" text-anchor="start" direction="rtl">${escapeXml(line)}</text>`;
     }
     const lineY = Math.min(modernStartY + modernTotal + 100, H - 300);
     svg += `<line x1="80" y1="${lineY}" x2="${W - 100}" y2="${lineY}" stroke="#0f172a" stroke-width="3"/>`;
@@ -721,7 +705,6 @@ async function showQuoteImage(text, style) {
   }
 }
 
-// ✅ فتح وضع التعديل
 function enterEditMode() {
   state.editMode = true;
   state.editedText = state.editedText || state.currentImageText;
@@ -733,7 +716,6 @@ function enterEditMode() {
   document.getElementById('regenBtn').classList.remove('hidden');
 }
 
-// ✅ توليد من جديد بعد التعديل
 async function regenerateFromEdit() {
   const ta = document.getElementById('editTextarea');
   const newText = (ta.value || '').trim();
@@ -940,7 +922,6 @@ function initApp() {
     document.getElementById('bookName').addEventListener('input', e => state.pdfName = e.target.value || 'كتاب');
     document.getElementById('authorName').addEventListener('input', e => { state.authorName = e.target.value; saveAuthor(e.target.value); });
 
-    // Style chips
     document.querySelectorAll('.style-chip').forEach(chip => {
       chip.addEventListener('click', async () => {
         state.imageStyle = chip.dataset.style;
@@ -950,7 +931,6 @@ function initApp() {
       });
     });
 
-    // Edit and regenerate
     document.getElementById('editQuoteBtn').addEventListener('click', enterEditMode);
     document.getElementById('regenBtn').addEventListener('click', regenerateFromEdit);
   } catch (e) {
