@@ -48,7 +48,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .modal-head h2 { font-size: 18px; }
 .filter-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .filter-row .btn { padding: 10px; font-size: 13px; }
-.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: rgba(0,0,0,0.9); color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 200; transition: transform 0.3s; max-width: 90%; text-align: center; }
+.toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(100px); background: rgba(0,0,0,0.9); color: #fff; padding: 12px 20px; border-radius: 10px; font-size: 13px; z-index: 999; transition: transform 0.3s; max-width: 90%; text-align: center; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 .progress { background: #e2e8f0; border-radius: 8px; height: 6px; overflow: hidden; margin: 8px 0; }
 .progress-bar { background: #2b6cb0; height: 100%; width: 0; transition: width 0.3s; }
@@ -81,14 +81,18 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .toggle-btn:disabled { opacity: 0.5; }
 
 /* ✅ شاشة توليد الفيديو */
-.video-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.video-box { background: #1a202c; color: #fff; padding: 24px; border-radius: 16px; max-width: 380px; width: 100%; text-align: center; }
+.video-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
+.video-box { background: #1a202c; color: #fff; padding: 20px; border-radius: 16px; max-width: 400px; width: 100%; text-align: center; }
 .video-box h3 { font-size: 16px; margin-bottom: 12px; }
 .video-box p { font-size: 13px; opacity: 0.8; margin-bottom: 16px; line-height: 1.7; }
 .video-progress { background: rgba(255,255,255,0.1); border-radius: 10px; height: 10px; overflow: hidden; margin: 16px 0; }
 .video-progress-bar { background: linear-gradient(90deg, #b83280, #b8945a); height: 100%; width: 0; transition: width 0.3s; }
 .video-percent { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #b8945a; }
 .video-status { font-size: 12px; opacity: 0.7; }
+#videoPlayer { width: 100%; max-height: 50vh; border-radius: 12px; margin-bottom: 14px; background: #000; }
+.video-hint { font-size: 11px; opacity: 0.65; margin-top: 14px; line-height: 1.7; color: #cbd5e0; }
+.video-btn-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.video-btn-row .btn { flex: 1; min-width: 110px; max-width: none; padding: 12px; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -165,6 +169,20 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   </div>
 </div>
 
+<!-- ✅ شاشة معاينة الفيديو -->
+<div id="videoPreview" class="video-overlay hidden">
+  <div class="video-box">
+    <h3>🎬 الفيديو جاهز</h3>
+    <video id="videoPlayer" controls playsinline></video>
+    <div class="video-btn-row">
+      <button type="button" id="shareVideoBtn" class="btn btn-blue">📤 مشاركة</button>
+      <button type="button" id="downloadVideoBtn" class="btn btn-gold">💾 حفظ في الملفات</button>
+      <button type="button" id="closeVideoBtn" class="btn btn-red">إغلاق</button>
+    </div>
+    <p class="video-hint">💡 <b>لحفظ الفيديو في تطبيق الصور:</b><br>اضغط "📤 مشاركة" ثم اختر "حفظ الفيديو" من قائمة النظام.</p>
+  </div>
+</div>
+
 <div id="toast" class="toast"></div>
 
 <script>
@@ -229,6 +247,7 @@ let state = {
   editMode: false, editedText: '',
   showQuote: true, showBook: true, showAuthor: true,
   currentVariantIdx: null,
+  currentVideoBlob: null, currentVideoMime: '', currentVideoUrl: '',
 };
 
 let fontsReady = false;
@@ -923,7 +942,6 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
   return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
 }
 
-// ✅ SVG → Image
 function svgToImage(svg) {
   return new Promise((resolve, reject) => {
     const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
@@ -1049,6 +1067,24 @@ function updateVideoProgress(percent, statusText) {
   if (statusText) document.getElementById('videoStatus').textContent = statusText;
 }
 
+// ✅ تفضيل MP4 أولًا (يدعم iOS Photos)
+function pickBestMimeType() {
+  const candidates = [
+    'video/mp4;codecs=avc1.42E01E', // H.264 baseline - iOS Photos compatible
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  for (const c of candidates) {
+    try {
+      if (MediaRecorder.isTypeSupported(c)) return c;
+    } catch (e) {}
+  }
+  return 'video/webm';
+}
+
 async function generateQuoteVideo(rawText, style) {
   await ensureFonts();
   const text = prepareQuoteText(rawText);
@@ -1069,9 +1105,6 @@ async function generateQuoteVideo(rawText, style) {
   if (startY < topDivider + 30) startY = topDivider + 30;
   if (startY + totalH > bottomDivider - 30) startY = bottomDivider - 30 - totalH;
 
-  const cx = W / 2;
-
-  // 1. تحليل النص إلى كلمات مع أرقام أسطرها
   const wordSeq = [];
   rawLines.forEach((line, li) => {
     if (!line.trim()) return;
@@ -1080,21 +1113,15 @@ async function generateQuoteVideo(rawText, style) {
   const totalWords = wordSeq.length;
   const totalLines = rawLines.length;
 
-  // 2. بناء الحالة النصية لكل عدد كلمات
   function buildPartialLines(upTo) {
-    const result = new Array(totalLines).fill('');
     const lineWords = new Array(totalLines).fill(null).map(() => []);
     for (let i = 0; i < upTo && i < totalWords; i++) {
       const w = wordSeq[i];
       lineWords[w.line].push(w.word);
     }
-    for (let i = 0; i < totalLines; i++) {
-      result[i] = lineWords[i].join(' ');
-    }
-    return result;
+    return lineWords.map(arr => arr.join(' '));
   }
 
-  // 3. بناء دالة SVG لكل حالة
   function buildVideoFrameSVG(upToWords) {
     const partialLines = buildPartialLines(upToWords);
     return buildQuoteSVG({
@@ -1109,14 +1136,12 @@ async function generateQuoteVideo(rawText, style) {
     });
   }
 
-  // 4. تحديد عدد الإطارات الرئيسية (لا نولّد لكل كلمة، بل نأخذ عينات)
   const MAX_FRAMES_TO_PRERENDER = 40;
   const step = Math.max(1, Math.ceil(totalWords / MAX_FRAMES_TO_PRERENDER));
   const frameWordCounts = [];
   for (let i = 0; i <= totalWords; i += step) frameWordCounts.push(i);
   if (frameWordCounts[frameWordCounts.length - 1] !== totalWords) frameWordCounts.push(totalWords);
 
-  // 5. Pre-render كل حالة
   const prerenderedImages = [];
   const revokeUrls = [];
   for (let i = 0; i < frameWordCounts.length; i++) {
@@ -1128,7 +1153,6 @@ async function generateQuoteVideo(rawText, style) {
     await new Promise(r => setTimeout(r, 10));
   }
 
-  // 6. تحضير Canvas للتسجيل
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -1136,34 +1160,31 @@ async function generateQuoteVideo(rawText, style) {
   ctx.fillRect(0, 0, W, H);
   ctx.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
 
-  // 7. MediaRecorder
   const FPS = 24;
   const TEXT_DURATION_MS = 7500;
   const HOLD_MS = 2500;
   const TOTAL_MS = TEXT_DURATION_MS + HOLD_MS;
-  const TOTAL_FRAMES = Math.floor((TOTAL_MS / 1000) * FPS);
 
   const stream = canvas.captureStream(FPS);
 
-  // اختر أفضل mime type مدعوم
-  let mimeType = 'video/webm';
-  if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) mimeType = 'video/webm;codecs=vp9';
-  else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) mimeType = 'video/webm;codecs=vp8';
-  else if (MediaRecorder.isTypeSupported('video/webm')) mimeType = 'video/webm';
-  else if (MediaRecorder.isTypeSupported('video/mp4')) mimeType = 'video/mp4';
+  const mimeType = pickBestMimeType();
 
-  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+  let recorder;
+  try {
+    recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+  } catch (e) {
+    revokeUrls.forEach(u => URL.revokeObjectURL(u));
+    throw new Error('تعذر بدء التسجيل: ' + e.message);
+  }
+
   const chunks = [];
   recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
 
-  // 8. دالة رسم الإطار الحالي
   function drawFrameAt(elapsedMs) {
     let frameIdx;
     if (elapsedMs < TEXT_DURATION_MS) {
       const progress = elapsedMs / TEXT_DURATION_MS;
-      // استخدام القيم من frameWordCounts
       const targetWord = Math.floor(progress * totalWords);
-      // ابحث عن أقرب إطار مرسوم
       let bestIdx = 0;
       for (let i = 0; i < frameWordCounts.length; i++) {
         if (frameWordCounts[i] <= targetWord) bestIdx = i;
@@ -1178,7 +1199,6 @@ async function generateQuoteVideo(rawText, style) {
     ctx.drawImage(prerenderedImages[frameIdx], 0, 0, W, H);
   }
 
-  // 9. التسجيل
   return new Promise((resolve, reject) => {
     try {
       recorder.start();
@@ -1190,7 +1210,7 @@ async function generateQuoteVideo(rawText, style) {
         const elapsed = performance.now() - startTime;
 
         if (elapsed >= TOTAL_MS) {
-          recorder.stop();
+          try { recorder.stop(); } catch (e) { reject(e); }
           return;
         }
 
@@ -1213,7 +1233,7 @@ async function generateQuoteVideo(rawText, style) {
         } catch (e) { reject(e); }
       };
 
-      recorder.onerror = (e) => { reject(new Error('MediaRecorder error')); };
+      recorder.onerror = () => reject(new Error('فشل التسجيل'));
 
       tick();
     } catch (e) {
@@ -1223,11 +1243,40 @@ async function generateQuoteVideo(rawText, style) {
   });
 }
 
+// ✅ مشاركة الفيديو (يفتح Share Sheet - يظهر "حفظ الفيديو" إذا كان MP4)
+async function shareVideoFile(blob, mimeType) {
+  const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+  const file = new File([blob], 'quote.' + ext, { type: mimeType });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'اقتباس' });
+      return true;
+    } catch (e) {
+      if (e.name === 'AbortError') return true; // المستخدم أغلق
+      return false;
+    }
+  }
+  return false;
+}
+
+// ✅ تحميل للملفات
+function downloadVideoFile(blob, mimeType) {
+  const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'quote-' + Date.now() + '.' + ext;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
 async function handleVideoGeneration() {
   if (videoLock) return;
   videoLock = true;
 
-  // تحقق من الدعم
   if (typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream) {
     videoLock = false;
     toast('❌ المتصفح لا يدعم توليد الفيديو');
@@ -1239,37 +1288,52 @@ async function handleVideoGeneration() {
 
   try {
     const { blob, mimeType } = await generateQuoteVideo(state.editedText || state.currentImageText, state.imageStyle);
-    const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-    const file = new File([blob], 'quote.' + ext, { type: mimeType });
 
+    // احفظ الحالة
+    state.currentVideoBlob = blob;
+    state.currentVideoMime = mimeType;
+
+    // أغلق شاشة التحميل
     document.getElementById('videoOverlay').classList.add('hidden');
-    videoLock = false;
 
-    // مشاركة
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: 'اقتباس' });
-      } catch (e) {
-        if (e.name !== 'AbortError') {
-          // fallback: تحميل
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url; a.download = 'quote.' + ext; a.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-        }
+    // افتح شاشة المعاينة
+    if (state.currentVideoUrl) URL.revokeObjectURL(state.currentVideoUrl);
+    state.currentVideoUrl = URL.createObjectURL(blob);
+    const videoEl = document.getElementById('videoPlayer');
+    videoEl.src = state.currentVideoUrl;
+    document.getElementById('videoPreview').classList.remove('hidden');
+
+    // اربط الأزرار
+    document.getElementById('shareVideoBtn').onclick = async () => {
+      toast('📤 جاري فتح قائمة المشاركة...', 1500);
+      const ok = await shareVideoFile(blob, mimeType);
+      if (!ok) {
+        toast('❌ تعذر فتح المشاركة — استخدم "حفظ في الملفات"', 2500);
       }
-    } else {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = 'quote.' + ext; a.click();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      toast('✅ تم تحميل الفيديو');
-    }
+    };
+    document.getElementById('downloadVideoBtn').onclick = () => {
+      downloadVideoFile(blob, mimeType);
+      toast('✅ تم حفظ الفيديو في الملفات', 1800);
+    };
+    document.getElementById('closeVideoBtn').onclick = closeVideoPreview;
+
   } catch (e) {
     document.getElementById('videoOverlay').classList.add('hidden');
+    toast('❌ فشل توليد الفيديو: ' + e.message, 3000);
+  } finally {
     videoLock = false;
-    toast('❌ فشل توليد الفيديو: ' + e.message);
   }
+}
+
+function closeVideoPreview() {
+  const videoEl = document.getElementById('videoPlayer');
+  try { videoEl.pause(); } catch (e) {}
+  videoEl.src = '';
+  if (state.currentVideoUrl) {
+    URL.revokeObjectURL(state.currentVideoUrl);
+    state.currentVideoUrl = '';
+  }
+  document.getElementById('videoPreview').classList.add('hidden');
 }
 
 function closePreview() { document.getElementById('imgPreview').classList.add('hidden'); }
