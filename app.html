@@ -58,21 +58,20 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .style-chip { padding: 8px 12px; border-radius: 20px; font-size: 11px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-family: inherit; }
 .style-chip.active { background: #b8945a; border-color: #b8945a; font-weight: 700; }
 #editPanel { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
-#editTextarea { width: 100%; height: 160px; padding: 12px; border-radius: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; font-size: 15px; font-family: inherit; direction: rtl; line-height: 1.7; resize: vertical; }
+#editTextarea { width: 100%; height: 150px; padding: 12px; border-radius: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; font-size: 15px; font-family: inherit; direction: rtl; line-height: 1.7; resize: vertical; }
 .preview-actions { display: flex; gap: 8px; width: 100%; max-width: 400px; flex-wrap: wrap; justify-content: center; }
 .preview-actions .btn { padding: 10px; font-size: 13px; flex: 1; min-width: 100px; }
-.toggle-row { display: flex; gap: 10px; width: 100%; }
+.toggle-row { display: flex; gap: 8px; width: 100%; flex-wrap: wrap; }
 
-/* ✅ تحسينات لمس iOS */
 .toggle-btn {
   flex: 1;
-  padding: 12px 8px;
+  padding: 12px 6px;
   border-radius: 10px;
   border: 2px solid #718096;
   background: rgba(255,255,255,0.1);
   color: #cbd5e0;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
   cursor: pointer;
   -webkit-appearance: none;
@@ -85,6 +84,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   position: relative;
   z-index: 10;
   min-height: 48px;
+  min-width: 100px;
 }
 .toggle-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.2); }
 .toggle-btn.on {
@@ -147,6 +147,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   <div id="editPanel" class="hidden">
     <textarea id="editTextarea" placeholder="عدّل النص هنا..."></textarea>
     <div class="toggle-row">
+      <button type="button" id="toggleQuoteBtn" class="toggle-btn on">❝ علامة الاقتباس</button>
       <button type="button" id="toggleBookBtn" class="toggle-btn on">📖 اسم الكتاب</button>
       <button type="button" id="toggleAuthorBtn" class="toggle-btn on">✍ المؤلف</button>
     </div>
@@ -207,8 +208,7 @@ let state = {
   busy: false, imageStyle: 'naskh',
   currentImageText: '', currentImageBlob: null,
   editMode: false, editedText: '',
-  showBook: true, showAuthor: true,
-  // ✅ حفظ آخر variant مستخدم لإعادة الاستخدام عند toggle
+  showQuote: true, showBook: true, showAuthor: true,
   currentVariantIdx: null,
 };
 
@@ -515,7 +515,7 @@ function buildDividerSVG(cx, y, width, color) {
 }
 
 function buildQuoteSVG(opts) {
-  const { W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant, showBook, showAuthor } = opts;
+  const { W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant, showQuote, showBook, showAuthor } = opts;
   const NS = 'xmlns="http://www.w3.org/2000/svg"';
   const font = variant.font;
   const textColor = variant.textColor;
@@ -575,7 +575,10 @@ function buildQuoteSVG(opts) {
     s += buildCornerSVG(W - c, H - c, -1, -1, config.cornerSize, config.cornerColor);
   }
 
-  s += `<text x="90" y="230" font-family="Aref Ruqaa, Georgia, serif" font-weight="bold" font-size="220" fill="${config.quoteMarkColor}" text-anchor="start">&#8220;</text>`;
+  // ✅ علامة الاقتباس مشروطة
+  if (showQuote) {
+    s += `<text x="90" y="230" font-family="Aref Ruqaa, Georgia, serif" font-weight="bold" font-size="220" fill="${config.quoteMarkColor}" text-anchor="start">&#8220;</text>`;
+  }
 
   s += buildDividerSVG(cx, topDivider, config.topDividerWidth || 300, config.ornamentColor);
 
@@ -695,12 +698,10 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
   const config = STYLE_CONFIGS[style] || STYLE_CONFIGS.naskh;
   const totalVariants = config.variants.length;
 
-  // ✅ استخدام forceVariantIdx إذا مررنا (للحفاظ على نفس النمط عند toggle)
   let variantIdx;
   if (typeof forceVariantIdx === 'number') {
     variantIdx = forceVariantIdx % totalVariants;
   } else if (typeof state.currentVariantIdx === 'number' && state.currentVariantIdx !== null) {
-    // احتفظ بنفس variant عند إعادة التوليد بنفس النمط
     variantIdx = state.currentVariantIdx % totalVariants;
   } else {
     variantIdx = nextVariant(totalVariants);
@@ -728,7 +729,10 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
     svg += `<rect width="${W}" height="${H}" fill="#fefefe"/>`;
     svg += `<rect x="0" y="0" width="14" height="${H}" fill="#0f172a"/>`;
     svg += `<rect x="14" y="0" width="6" height="${H}" fill="#2b6cb0"/>`;
-    svg += `<text x="50" y="260" font-family="-apple-system, system-ui, sans-serif" font-weight="bold" font-size="280" fill="#0f172a" text-anchor="start">&#8220;</text>`;
+    // ✅ علامة الاقتباس مشروطة في النمط الحديث أيضاً
+    if (state.showQuote) {
+      svg += `<text x="50" y="260" font-family="-apple-system, system-ui, sans-serif" font-weight="bold" font-size="280" fill="#0f172a" text-anchor="start">&#8220;</text>`;
+    }
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]; if (!line) continue;
       const y = startY + i * lineHeight + fontSize * 0.85;
@@ -749,6 +753,7 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
       W, H, lines, fontSize, lineHeight,
       startY, topDivider, bottomDivider,
       bookName, authorName, config, variant,
+      showQuote: state.showQuote,
       showBook: state.showBook,
       showAuthor: state.showAuthor,
     });
@@ -783,7 +788,6 @@ async function showQuoteImage(text, style) {
     state.currentImageText = text;
     state.editedText = text;
     state.editMode = false;
-    // ✅ عند فتح صورة جديدة، أعِد variant للحالة الافتراضية
     state.currentVariantIdx = null;
     const useStyle = style || state.imageStyle;
     const blob = await generateQuoteImage(state.editedText, state.pdfName, state.authorName, useStyle);
@@ -820,17 +824,20 @@ function enterEditMode() {
 }
 
 function updateToggleUI() {
+  const q = document.getElementById('toggleQuoteBtn');
   const b = document.getElementById('toggleBookBtn');
   const a = document.getElementById('toggleAuthorBtn');
+  q.classList.toggle('on', state.showQuote);
+  q.classList.toggle('off', !state.showQuote);
   b.classList.toggle('on', state.showBook);
   b.classList.toggle('off', !state.showBook);
   a.classList.toggle('on', state.showAuthor);
   a.classList.toggle('off', !state.showAuthor);
+  q.textContent = (state.showQuote ? '❝ ' : '🚫 ') + 'علامة الاقتباس';
   b.textContent = (state.showBook ? '📖 ' : '🚫 ') + 'اسم الكتاب';
   a.textContent = (state.showAuthor ? '✍ ' : '🚫 ') + 'المؤلف';
 }
 
-// ✅ دالة إعادة توليد مشتركة (تعمل بعد التعديل أو toggle)
 async function regenerateCurrent() {
   if (state.busy) return;
   state.busy = true;
@@ -840,11 +847,12 @@ async function regenerateCurrent() {
   state.editedText = newText;
 
   setStatus('جاري إعادة التوليد...');
-  // عطّل الأزرار مؤقتًا
-  document.getElementById('toggleBookBtn').disabled = true;
-  document.getElementById('toggleAuthorBtn').disabled = true;
-  document.getElementById('regenBtn').disabled = true;
-  document.getElementById('regenBtn').textContent = '⏳ جاري التوليد...';
+  const tQ = document.getElementById('toggleQuoteBtn');
+  const tB = document.getElementById('toggleBookBtn');
+  const tA = document.getElementById('toggleAuthorBtn');
+  const rB = document.getElementById('regenBtn');
+  tQ.disabled = true; tB.disabled = true; tA.disabled = true; rB.disabled = true;
+  rB.textContent = '⏳ جاري التوليد...';
 
   try {
     const blob = await generateQuoteImage(state.editedText, state.pdfName, state.authorName, state.imageStyle);
@@ -863,10 +871,8 @@ async function regenerateCurrent() {
     toast('❌ ' + e.message);
     showErr('regen: ' + e.message);
   } finally {
-    document.getElementById('toggleBookBtn').disabled = false;
-    document.getElementById('toggleAuthorBtn').disabled = false;
-    document.getElementById('regenBtn').disabled = false;
-    document.getElementById('regenBtn').textContent = '🎨 توليد الصورة';
+    tQ.disabled = false; tB.disabled = false; tA.disabled = false; rB.disabled = false;
+    rB.textContent = '🎨 توليد الصورة';
     state.busy = false;
   }
 }
@@ -1057,7 +1063,7 @@ function initApp() {
       chip.addEventListener('click', async () => {
         state.imageStyle = chip.dataset.style;
         saveStyle(state.imageStyle);
-        state.currentVariantIdx = null; // ✅ عند تغيير النمط، اختر variant جديد
+        state.currentVariantIdx = null;
         document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
         await showQuoteImage(state.editedText || state.currentImageText, state.imageStyle);
       });
@@ -1066,7 +1072,13 @@ function initApp() {
     document.getElementById('editQuoteBtn').addEventListener('click', enterEditMode);
     document.getElementById('regenBtn').addEventListener('click', regenerateCurrent);
 
-    // ✅ أزرار toggle تعيد التوليد فورًا
+    // ✅ ثلاثة أزرار toggle
+    document.getElementById('toggleQuoteBtn').addEventListener('click', async () => {
+      state.showQuote = !state.showQuote;
+      updateToggleUI();
+      toast(state.showQuote ? '❝ إظهار علامة الاقتباس' : '🚫 إخفاء علامة الاقتباس', 1200);
+      await regenerateCurrent();
+    });
     document.getElementById('toggleBookBtn').addEventListener('click', async () => {
       state.showBook = !state.showBook;
       updateToggleUI();
@@ -1080,7 +1092,6 @@ function initApp() {
       await regenerateCurrent();
     });
 
-    // ✅ تهيئة الأزرار عند فتح الصفحة
     updateToggleUI();
   } catch (e) {
     showErr('init: ' + e.message);
