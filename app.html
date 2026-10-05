@@ -351,10 +351,14 @@ function measureSvgTextWidth(text, fontSize, fontWeight, fontFamily) {
   _measureText.setAttribute('font-size', String(fontSize));
   _measureText.setAttribute('font-weight', String(fontWeight || 700));
   _measureText.setAttribute('direction', 'rtl');
-  _measureText.setAttribute('text-anchor', 'start');
+  _measureText.setAttribute('text-anchor', 'middle');
+  _measureText.setAttribute('x', '500');
+  _measureText.setAttribute('y', '100');
   _measureText.textContent = text;
   let w = 0;
-  try { w = _measureText.getBBox().width; } catch (e) { w = text.length * fontSize * 0.5; }
+  try { w = _measureText.getComputedTextLength(); } catch (e) {
+    try { w = _measureText.getBBox().width; } catch (e2) { w = text.length * fontSize * 0.5; }
+  }
   return w;
 }
 
@@ -421,6 +425,7 @@ function buildQuoteSVG(opts) {
   const textColor = variant.textColor;
   const textShadow = variant.textShadow;
   const textHighlight = variant.textHighlight;
+  const cx = W / 2;
 
   let s = `<svg ${NS} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
 
@@ -476,27 +481,28 @@ function buildQuoteSVG(opts) {
 
   s += `<text x="90" y="230" font-family="Aref Ruqaa, Georgia, serif" font-weight="bold" font-size="220" fill="${config.quoteMarkColor}" text-anchor="start">&#8220;</text>`;
 
-  s += buildDividerSVG(W/2, topDivider, config.topDividerWidth || 300, config.ornamentColor);
+  s += buildDividerSVG(cx, topDivider, config.topDividerWidth || 300, config.ornamentColor);
 
+  // ✅ النص في المنتصف text-anchor="middle"
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
     const baselineY = startY + i * lineHeight + fontSize * 0.85;
-    const common = `font-family="${font}" font-weight="700" font-size="${fontSize}" text-anchor="start" direction="rtl"`;
-    s += `<text x="${W - 100 + 2}" y="${baselineY + 3}" ${common} fill="${textShadow}">${escapeXml(line)}</text>`;
-    s += `<text x="${W - 100 - 1}" y="${baselineY - 1}" ${common} fill="${textHighlight}">${escapeXml(line)}</text>`;
-    s += `<text x="${W - 100}" y="${baselineY}" ${common} fill="${textColor}">${escapeXml(line)}</text>`;
+    const common = `font-family="${font}" font-weight="700" font-size="${fontSize}" text-anchor="middle" direction="rtl"`;
+    s += `<text x="${cx + 2}" y="${baselineY + 3}" ${common} fill="${textShadow}">${escapeXml(line)}</text>`;
+    s += `<text x="${cx - 1}" y="${baselineY - 1}" ${common} fill="${textHighlight}">${escapeXml(line)}</text>`;
+    s += `<text x="${cx}" y="${baselineY}" ${common} fill="${textColor}">${escapeXml(line)}</text>`;
   }
 
-  s += buildDividerSVG(W/2, bottomDivider, config.bottomDividerWidth || 240, config.ornamentColor);
+  s += buildDividerSVG(cx, bottomDivider, config.bottomDividerWidth || 240, config.ornamentColor);
 
   if (bookName) {
     const bookText = '\u{1F4D6} \uFD3F ' + bookName + ' \uFD3E';
-    s += `<text x="${W/2}" y="${H - 200}" font-family="${FONT_FAMILY}" font-weight="700" font-size="36" fill="${config.bookColor}" text-anchor="middle" direction="rtl">${escapeXml(bookText)}</text>`;
+    s += `<text x="${cx}" y="${H - 200}" font-family="${FONT_FAMILY}" font-weight="700" font-size="36" fill="${config.bookColor}" text-anchor="middle" direction="rtl">${escapeXml(bookText)}</text>`;
   }
   if (authorName) {
     const authorText = '\u270D ' + authorName;
-    s += `<text x="${W/2}" y="${H - 150}" font-family="${FONT_FAMILY}" font-weight="400" font-style="italic" font-size="28" fill="${config.authorColor}" text-anchor="middle" direction="rtl">${escapeXml(authorText)}</text>`;
+    s += `<text x="${cx}" y="${H - 150}" font-family="${FONT_FAMILY}" font-weight="400" font-style="italic" font-size="28" fill="${config.authorColor}" text-anchor="middle" direction="rtl">${escapeXml(authorText)}</text>`;
   }
 
   const wmPositions = [
@@ -603,7 +609,7 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
 
   const fontSize = adaptiveFontSize(text.length, config.fontBase, config.fontMin);
   const lineHeight = Math.round(fontSize * 1.75);
-  const maxTextWidth = W - 200;
+  const maxTextWidth = W - 240;
   const lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
 
   const totalH = lines.length * lineHeight;
@@ -621,6 +627,7 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
   if (startY < topDivider + 60) startY = topDivider + 60;
   if (startY + totalH > bottomDivider - 60) startY = bottomDivider - 60 - totalH;
 
+  const cx = W / 2;
   let svg;
   if (config.isModern) {
     svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
@@ -634,13 +641,13 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]; if (!line) continue;
       const y = modernStartY + i * modernLH + fontSize * 0.85;
-      svg += `<text x="${W - 100}" y="${y}" font-family="${variant.font}" font-weight="800" font-size="${fontSize}" fill="${variant.textColor}" text-anchor="start" direction="rtl">${escapeXml(line)}</text>`;
+      svg += `<text x="${cx}" y="${y}" font-family="${variant.font}" font-weight="800" font-size="${fontSize}" fill="${variant.textColor}" text-anchor="middle" direction="rtl">${escapeXml(line)}</text>`;
     }
     const lineY = Math.min(modernStartY + modernTotal + 100, H - 300);
     svg += `<line x1="80" y1="${lineY}" x2="${W - 100}" y2="${lineY}" stroke="#0f172a" stroke-width="3"/>`;
     svg += `<circle cx="${W - 100}" cy="${lineY}" r="8" fill="#2b6cb0"/>`;
-    if (bookName) svg += `<text x="100" y="${lineY + 60}" font-family="-apple-system, ${FONT_FAMILY}" font-weight="700" font-size="32" fill="#0f172a" text-anchor="start" direction="rtl">📖 ${escapeXml(bookName)}</text>`;
-    if (authorName) svg += `<text x="100" y="${lineY + 110}" font-family="-apple-system, ${FONT_FAMILY}" font-size="26" fill="#64748b" text-anchor="start" direction="rtl">✍ ${escapeXml(authorName)}</text>`;
+    if (bookName) svg += `<text x="${cx}" y="${lineY + 60}" font-family="-apple-system, ${FONT_FAMILY}" font-weight="700" font-size="32" fill="#0f172a" text-anchor="middle" direction="rtl">📖 ${escapeXml(bookName)}</text>`;
+    if (authorName) svg += `<text x="${cx}" y="${lineY + 110}" font-family="-apple-system, ${FONT_FAMILY}" font-size="26" fill="#64748b" text-anchor="middle" direction="rtl">✍ ${escapeXml(authorName)}</text>`;
     const wm = [{x:W*0.25,y:H*0.18},{x:W*0.75,y:H*0.36},{x:W*0.28,y:H*0.58},{x:W*0.72,y:H*0.78}];
     for (const p of wm) {
       svg += `<text transform="translate(${p.x.toFixed(0)} ${p.y.toFixed(0)}) rotate(-22)" font-family="-apple-system, system-ui" font-weight="700" font-size="34" fill="#0f172a" opacity="0.07" text-anchor="middle">sab3-77</text>`;
