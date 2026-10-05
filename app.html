@@ -380,14 +380,63 @@ function wrapArabicText(text, maxWidth, fontSize, fontFamily) {
   return lines;
 }
 
-function adaptiveFontSize(len, base, min) {
-  if (len < 80) return base;
-  if (len < 140) return base - 4;
-  if (len < 220) return base - 10;
-  if (len < 320) return base - 16;
-  if (len < 420) return base - 22;
-  if (len < 520) return base - 28;
-  return min;
+// ✅ خوارزمية جديدة: توزيع النص على 5-6 أسطر
+function computeOptimalLayout(text, W, H, config, variant) {
+  const len = text.length;
+  const topDivider = config.isModern ? 120 : 340;
+  const bottomDivider = config.isModern ? H - 320 : H - 400;
+  const availableHeight = bottomDivider - topDivider - 100;
+
+  // الهدف: 5-6 أسطر (للنصوص القصيرة جدًا، أقل)
+  const maxPossible = Math.max(2, Math.floor(len / 6));
+  const targetLines = Math.min(6, Math.max(3, Math.floor(len / 8)));
+  const finalTarget = Math.min(targetLines, maxPossible);
+
+  // ابدأ من خط كبير + عمود ضيق
+  let fontSize = 130;
+  let maxTextWidth = 460;
+
+  // ضبط الخط حسب طول النص
+  if (len > 60) fontSize = 115;
+  if (len > 100) fontSize = 100;
+  if (len > 160) fontSize = 88;
+  if (len > 240) fontSize = 76;
+  if (len > 320) fontSize = 66;
+
+  // ضبط عرض العمود بناءً على الخط
+  const approxCharsPerLine = Math.max(6, Math.ceil(len / finalTarget));
+  maxTextWidth = Math.min(
+    W - 220,
+    Math.max(380, approxCharsPerLine * fontSize * 0.55)
+  );
+
+  let lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
+
+  // قلّل الخط إذا تجاوز الارتفاع المتاح
+  let safety = 0;
+  while (lines.length * Math.round(fontSize * 1.75) > availableHeight && fontSize > 40 && safety < 30) {
+    fontSize -= 4;
+    if (fontSize < 90 && maxTextWidth < W - 220) maxTextWidth += 15;
+    lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
+    safety++;
+  }
+
+  // اضبط للوصول إلى الهدف
+  safety = 0;
+  while (lines.length > finalTarget + 1 && fontSize > 40 && safety < 20) {
+    fontSize -= 3;
+    lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
+    safety++;
+  }
+  safety = 0;
+  while (lines.length < finalTarget && fontSize < 140 && safety < 25) {
+    fontSize += 4;
+    if (fontSize > 100 && maxTextWidth > 400) maxTextWidth -= 15;
+    lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
+    safety++;
+  }
+
+  return { fontSize, maxTextWidth, lines, topDivider, bottomDivider, availableHeight };
 }
 
 function buildCornerSVG(cx, cy, dirX, dirY, size, color) {
@@ -483,7 +532,6 @@ function buildQuoteSVG(opts) {
 
   s += buildDividerSVG(cx, topDivider, config.topDividerWidth || 300, config.ornamentColor);
 
-  // ✅ النص في المنتصف text-anchor="middle"
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line) continue;
@@ -533,7 +581,6 @@ const STYLE_CONFIGS = {
     ornamentColor: '#c9a961', quoteMarkColor: '#f5e6b8',
     bookColor: '#f5e6b8', authorColor: '#c9a961', watermarkColor: '#e8d5a8',
     topDividerWidth: 320, bottomDividerWidth: 260,
-    fontBase: 78, fontMin: 48,
     variants: [
       { font: FONT_FAMILY,  textColor: '#e8d5a8', textShadow: 'rgba(0,0,0,0.85)', textHighlight: 'rgba(255,245,200,0.85)' },
       { font: FONT_FAMILY_B, textColor: '#f5e6b8', textShadow: 'rgba(0,0,0,0.9)',  textHighlight: 'rgba(255,250,220,0.9)' },
@@ -553,7 +600,6 @@ const STYLE_CONFIGS = {
     ornamentColor: '#c9a961', quoteMarkColor: 'rgba(201,169,97,0.9)',
     bookColor: '#e8d5a8', authorColor: '#c9a961', watermarkColor: '#c9a961',
     topDividerWidth: 320, bottomDividerWidth: 240,
-    fontBase: 76, fontMin: 46,
     variants: [
       { font: FONT_FAMILY,  textColor: '#f5ecd9', textShadow: 'rgba(0,0,0,0.55)', textHighlight: 'rgba(255,255,255,0.35)' },
       { font: FONT_FAMILY_B, textColor: '#e8d5a8', textShadow: 'rgba(0,0,0,0.7)',  textHighlight: 'rgba(255,240,200,0.55)' },
@@ -571,7 +617,6 @@ const STYLE_CONFIGS = {
     ornamentColor: '#b8945a', quoteMarkColor: 'rgba(30, 58, 95, 0.85)',
     bookColor: '#5c4a2f', authorColor: '#8a7a5f', watermarkColor: '#5a3a10',
     topDividerWidth: 300, bottomDividerWidth: 240,
-    fontBase: 74, fontMin: 46,
     variants: [
       { font: FONT_FAMILY,  textColor: '#2a1f14', textShadow: 'rgba(0,0,0,0.28)', textHighlight: 'rgba(255,240,200,0.75)' },
       { font: FONT_FAMILY_B, textColor: '#1a2a45', textShadow: 'rgba(0,0,0,0.3)',  textHighlight: 'rgba(200,220,255,0.6)' },
@@ -586,7 +631,6 @@ const STYLE_CONFIGS = {
     ornamentColor: '#0f172a', quoteMarkColor: '#0f172a',
     bookColor: '#0f172a', authorColor: '#64748b', watermarkColor: '#0f172a',
     topDividerWidth: 0, bottomDividerWidth: 0,
-    fontBase: 78, fontMin: 48,
     isModern: true,
     variants: [
       { font: '-apple-system, "SF Arabic", ' + FONT_FAMILY, textColor: '#0f172a', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.4)' },
@@ -607,25 +651,19 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
     ? config.variants[forceVariantIdx % totalVariants]
     : config.variants[nextVariant(totalVariants)];
 
-  const fontSize = adaptiveFontSize(text.length, config.fontBase, config.fontMin);
+  // ✅ استخدام الخوارزمية الجديدة
+  const layout = computeOptimalLayout(text, W, H, config, variant);
+  const fontSize = layout.fontSize;
+  const lines = layout.lines;
   const lineHeight = Math.round(fontSize * 1.75);
-  const maxTextWidth = W - 240;
-  const lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
+  const topDivider = layout.topDivider;
+  const bottomDivider = layout.bottomDivider;
 
   const totalH = lines.length * lineHeight;
-
-  let topDivider, bottomDivider;
-  if (config.isModern) {
-    topDivider = 100;
-    bottomDivider = H - 300;
-  } else {
-    topDivider = 340;
-    bottomDivider = H - 400;
-  }
   const centerY = (topDivider + bottomDivider) / 2;
   let startY = centerY - totalH / 2;
-  if (startY < topDivider + 60) startY = topDivider + 60;
-  if (startY + totalH > bottomDivider - 60) startY = bottomDivider - 60 - totalH;
+  if (startY < topDivider + 40) startY = topDivider + 40;
+  if (startY + totalH > bottomDivider - 40) startY = bottomDivider - 40 - totalH;
 
   const cx = W / 2;
   let svg;
@@ -635,15 +673,12 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
     svg += `<rect x="0" y="0" width="14" height="${H}" fill="#0f172a"/>`;
     svg += `<rect x="14" y="0" width="6" height="${H}" fill="#2b6cb0"/>`;
     svg += `<text x="50" y="260" font-family="-apple-system, system-ui, sans-serif" font-weight="bold" font-size="280" fill="#0f172a" text-anchor="start">&#8220;</text>`;
-    const modernLH = Math.round(fontSize * 1.6);
-    const modernTotal = lines.length * modernLH;
-    const modernStartY = (H / 2) - (modernTotal / 2);
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]; if (!line) continue;
-      const y = modernStartY + i * modernLH + fontSize * 0.85;
+      const y = startY + i * lineHeight + fontSize * 0.85;
       svg += `<text x="${cx}" y="${y}" font-family="${variant.font}" font-weight="800" font-size="${fontSize}" fill="${variant.textColor}" text-anchor="middle" direction="rtl">${escapeXml(line)}</text>`;
     }
-    const lineY = Math.min(modernStartY + modernTotal + 100, H - 300);
+    const lineY = Math.min(startY + totalH + 80, H - 300);
     svg += `<line x1="80" y1="${lineY}" x2="${W - 100}" y2="${lineY}" stroke="#0f172a" stroke-width="3"/>`;
     svg += `<circle cx="${W - 100}" cy="${lineY}" r="8" fill="#2b6cb0"/>`;
     if (bookName) svg += `<text x="${cx}" y="${lineY + 60}" font-family="-apple-system, ${FONT_FAMILY}" font-weight="700" font-size="32" fill="#0f172a" text-anchor="middle" direction="rtl">📖 ${escapeXml(bookName)}</text>`;
