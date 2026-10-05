@@ -552,10 +552,10 @@ function buildDiamondPatternSVG(W, H, color, opacity) {
   return s;
 }
 
-// ✅ برواز مبسط للخبر: قوسان سميكان في زاويتين متقابلتين
+// ✅ برواز الخبر: قوسان سميكان وطويلان
 function buildNewsBracketsSVG(W, H, color, thickness) {
   const pad = 70;
-  const armLen = 220;
+  const armLen = 350; // ✅ أطول
   let s = `<g stroke="${color}" fill="none" stroke-width="${thickness}" stroke-linecap="square">`;
   // علوي-يسار
   s += `<line x1="${pad}" y1="${pad}" x2="${pad + armLen}" y2="${pad}"/>`;
@@ -600,7 +600,6 @@ function buildQuoteSVG(opts) {
   if (config.diamondPattern) {
     s += buildDiamondPatternSVG(W, H, config.diamondColor, 0.06);
   }
-  // ❌ تمت إزالة القمر
 
   if (config.stars && !config.starsLayer) {
     s += `<g fill="${config.starsColor}" opacity="0.18">`;
@@ -624,9 +623,8 @@ function buildQuoteSVG(opts) {
     s += buildCornerSVG(W - c, H - c, -1, -1, config.cornerSize, config.cornerColor);
   }
 
-  // ✅ برواز الخبر الجديد (بدل شارة عاجل)
   if (config.newsBrackets) {
-    s += buildNewsBracketsSVG(W, H, config.bracketColor || '#1a1a1a', config.bracketThickness || 14);
+    s += buildNewsBracketsSVG(W, H, config.bracketColor || '#1a1a1a', config.bracketThickness || 28);
   }
 
   if (showQuote) {
@@ -761,7 +759,6 @@ const STYLE_CONFIGS = {
       { font: FONT_FAMILY_B, textColor: '#f0e6d2', textShadow: 'rgba(0,0,0,0.8)',  textHighlight: 'rgba(255,245,200,0.6)' },
     ],
   },
-  // ✅ الليلي: بدون قمر الآن
   night: {
     bgColors: ['#000308', '#0a1224', '#000205'],
     vignette: ['rgba(70, 100, 180, 0.18)', 'rgba(0, 0, 0, 0.75)'],
@@ -780,7 +777,7 @@ const STYLE_CONFIGS = {
       { font: FONT_FAMILY_B, textColor: '#f0f4fc', textShadow: 'rgba(0,0,0,0.95)', textHighlight: 'rgba(200,215,250,0.4)' },
     ],
   },
-  // ✅ الخبر: بدون شارة عاجل، مع برواز قوسين
+  // ✅ الخبر: سماكة 28 (ضِعف) وطول 350
   news: {
     bgColors: ['#ffffff', '#fcfcfc', '#f5f5f5'],
     vignette: ['rgba(255,255,255,0)', 'rgba(180, 180, 180, 0.12)'],
@@ -788,7 +785,7 @@ const STYLE_CONFIGS = {
     cornerColor: null,
     newsBrackets: true,
     bracketColor: '#1a1a1a',
-    bracketThickness: 14,
+    bracketThickness: 28,
     ornamentColor: '#1a1a1a', quoteMarkColor: '#1a1a1a',
     bookColor: '#1a1a1a', authorColor: '#666666', watermarkColor: '#999999',
     topDividerWidth: 240, bottomDividerWidth: 200,
