@@ -509,7 +509,6 @@ function buildDividerSVG(cx, y, width, color) {
   return g;
 }
 
-// ✅ زخرفة إسلامية (نجمة ثمانية - خاتم)
 function buildKhatimPatternSVG(W, H, color, opacity) {
   const spacing = 110;
   let s = `<g stroke="${color}" fill="none" stroke-width="1.5" opacity="${opacity}">`;
@@ -526,7 +525,6 @@ function buildKhatimPatternSVG(W, H, color, opacity) {
   return s;
 }
 
-// ✅ طبقة نجوم عشوائية
 function buildStarsLayerSVG(W, H, count) {
   let s = '<g>';
   for (let i = 0; i < count; i++) {
@@ -540,31 +538,6 @@ function buildStarsLayerSVG(W, H, count) {
   return s;
 }
 
-// ✅ هلال القمر
-function buildMoonSVG(W, H, color) {
-  const cx = W - 200;
-  const cy = 230;
-  const r = 90;
-  return `<g>
-    <defs>
-      <mask id="moonMask">
-        <rect x="0" y="0" width="${W}" height="${H}" fill="white"/>
-        <circle cx="${cx + 45}" cy="${cy - 25}" r="${r * 0.85}" fill="black"/>
-      </mask>
-    </defs>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}" opacity="0.9" mask="url(#moonMask)"/>
-  </g>`;
-}
-
-// ✅ شارة "عاجل" للخبر
-function buildNewsBadgeSVG() {
-  return `<g>
-    <rect x="80" y="90" width="220" height="80" rx="12" fill="#c53030"/>
-    <text x="190" y="145" font-family="-apple-system, system-ui, sans-serif" font-weight="900" font-size="42" fill="#ffffff" text-anchor="middle">عاجل</text>
-  </g>`;
-}
-
-// ✅ نمط معينات خفيف
 function buildDiamondPatternSVG(W, H, color, opacity) {
   const spacing = 130;
   let s = `<g stroke="${color}" fill="none" stroke-width="0.8" opacity="${opacity}">`;
@@ -576,6 +549,21 @@ function buildDiamondPatternSVG(W, H, color, opacity) {
     }
   }
   s += `</g>`;
+  return s;
+}
+
+// ✅ برواز مبسط للخبر: قوسان سميكان في زاويتين متقابلتين
+function buildNewsBracketsSVG(W, H, color, thickness) {
+  const pad = 70;
+  const armLen = 220;
+  let s = `<g stroke="${color}" fill="none" stroke-width="${thickness}" stroke-linecap="square">`;
+  // علوي-يسار
+  s += `<line x1="${pad}" y1="${pad}" x2="${pad + armLen}" y2="${pad}"/>`;
+  s += `<line x1="${pad}" y1="${pad}" x2="${pad}" y2="${pad + armLen}"/>`;
+  // سفلي-يمين
+  s += `<line x1="${W - pad}" y1="${H - pad}" x2="${W - pad - armLen}" y2="${H - pad}"/>`;
+  s += `<line x1="${W - pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad - armLen}"/>`;
+  s += '</g>';
   return s;
 }
 
@@ -603,7 +591,6 @@ function buildQuoteSVG(opts) {
   s += `<rect width="${W}" height="${H}" fill="url(#bgGrad)"/>`;
   s += `<rect width="${W}" height="${H}" fill="url(#vgGrad)"/>`;
 
-  // ✅ أنماط خاصة بالخلفية
   if (config.khatimPattern) {
     s += buildKhatimPatternSVG(W, H, config.khatimColor, 0.07);
   }
@@ -613,9 +600,7 @@ function buildQuoteSVG(opts) {
   if (config.diamondPattern) {
     s += buildDiamondPatternSVG(W, H, config.diamondColor, 0.06);
   }
-  if (config.moon) {
-    s += buildMoonSVG(W, H, config.moonColor || '#e8eef8');
-  }
+  // ❌ تمت إزالة القمر
 
   if (config.stars && !config.starsLayer) {
     s += `<g fill="${config.starsColor}" opacity="0.18">`;
@@ -639,12 +624,11 @@ function buildQuoteSVG(opts) {
     s += buildCornerSVG(W - c, H - c, -1, -1, config.cornerSize, config.cornerColor);
   }
 
-  // ✅ شارة عاجل للخبر
-  if (config.newsBadge) {
-    s += buildNewsBadgeSVG();
+  // ✅ برواز الخبر الجديد (بدل شارة عاجل)
+  if (config.newsBrackets) {
+    s += buildNewsBracketsSVG(W, H, config.bracketColor || '#1a1a1a', config.bracketThickness || 14);
   }
 
-  // ✅ علامة الاقتباس (مشروطة)
   if (showQuote) {
     s += `<text x="90" y="230" font-family="Aref Ruqaa, Georgia, serif" font-weight="bold" font-size="220" fill="${config.quoteMarkColor}" text-anchor="start">&#8220;</text>`;
   }
@@ -758,7 +742,6 @@ const STYLE_CONFIGS = {
       { font: FONT_FAMILY_B, textColor: '#064e3b', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.4)' },
     ],
   },
-  // ✅ النمط 5: إسلامي مزخرف
   islamic: {
     bgColors: ['#0a3d2e', '#0e5940', '#082818'],
     vignette: ['rgba(212, 175, 55, 0.18)', 'rgba(0, 0, 0, 0.55)'],
@@ -778,7 +761,7 @@ const STYLE_CONFIGS = {
       { font: FONT_FAMILY_B, textColor: '#f0e6d2', textShadow: 'rgba(0,0,0,0.8)',  textHighlight: 'rgba(255,245,200,0.6)' },
     ],
   },
-  // ✅ النمط 6: ليلي بنجوم
+  // ✅ الليلي: بدون قمر الآن
   night: {
     bgColors: ['#000308', '#0a1224', '#000205'],
     vignette: ['rgba(70, 100, 180, 0.18)', 'rgba(0, 0, 0, 0.75)'],
@@ -788,7 +771,6 @@ const STYLE_CONFIGS = {
     ],
     cornerColor: 'rgba(200, 215, 240, 0.55)', cornerSize: 110, cornerInset: 65,
     starsLayer: true, starsCount: 140,
-    moon: true, moonColor: '#e8eef8',
     ornamentColor: 'rgba(200, 215, 240, 0.6)', quoteMarkColor: 'rgba(220, 230, 250, 0.75)',
     bookColor: '#c8d2e6', authorColor: '#8899b8', watermarkColor: '#c8d2e6',
     topDividerWidth: 280, bottomDividerWidth: 220,
@@ -798,14 +780,16 @@ const STYLE_CONFIGS = {
       { font: FONT_FAMILY_B, textColor: '#f0f4fc', textShadow: 'rgba(0,0,0,0.95)', textHighlight: 'rgba(200,215,250,0.4)' },
     ],
   },
-  // ✅ النمط 7: خبر عاجل
+  // ✅ الخبر: بدون شارة عاجل، مع برواز قوسين
   news: {
     bgColors: ['#ffffff', '#fcfcfc', '#f5f5f5'],
     vignette: ['rgba(255,255,255,0)', 'rgba(180, 180, 180, 0.12)'],
     frames: [],
     cornerColor: null,
-    newsBadge: true,
-    ornamentColor: '#c53030', quoteMarkColor: '#c53030',
+    newsBrackets: true,
+    bracketColor: '#1a1a1a',
+    bracketThickness: 14,
+    ornamentColor: '#1a1a1a', quoteMarkColor: '#1a1a1a',
     bookColor: '#1a1a1a', authorColor: '#666666', watermarkColor: '#999999',
     topDividerWidth: 240, bottomDividerWidth: 200,
     isNews: true,
@@ -815,7 +799,6 @@ const STYLE_CONFIGS = {
       { font: FONT_FAMILY_B, textColor: '#1a1a1a', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.5)' },
     ],
   },
-  // ✅ النمط 8: نصيحة زمردي
   emerald: {
     bgColors: ['#0a3d2e', '#0f4a37', '#082818'],
     vignette: ['rgba(150, 220, 180, 0.12)', 'rgba(0, 0, 0, 0.5)'],
