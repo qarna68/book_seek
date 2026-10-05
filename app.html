@@ -52,18 +52,53 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .progress { background: #e2e8f0; border-radius: 8px; height: 6px; overflow: hidden; margin: 8px 0; }
 .progress-bar { background: #2b6cb0; height: 100%; width: 0; transition: width 0.3s; }
 .img-preview { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 12px; flex-direction: column; gap: 12px; overflow-y: auto; }
-.img-preview img { max-width: 100%; max-height: 55vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+.img-preview img { max-width: 100%; max-height: 50vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
 .img-preview .btn { max-width: 200px; }
 .style-picker { display: flex; gap: 6px; max-width: 100%; flex-wrap: wrap; justify-content: center; }
 .style-chip { padding: 8px 12px; border-radius: 20px; font-size: 11px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-family: inherit; }
 .style-chip.active { background: #b8945a; border-color: #b8945a; font-weight: 700; }
-#editPanel { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 8px; }
-#editTextarea { width: 100%; height: 180px; padding: 12px; border-radius: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; font-size: 15px; font-family: inherit; direction: rtl; line-height: 1.7; resize: vertical; }
-.preview-actions { display: flex; gap: 8px; width: 100%; max-width: 400px; flex-wrap: wrap; }
-.preview-actions .btn { padding: 10px; font-size: 13px; }
-.toggle-row { display: flex; gap: 8px; }
-.toggle-btn { flex: 1; padding: 10px; border-radius: 10px; border: 2px solid #4a5568; background: transparent; color: #cbd5e0; font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
-.toggle-btn.on { background: #2f855a; border-color: #2f855a; color: #fff; }
+#editPanel { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
+#editTextarea { width: 100%; height: 160px; padding: 12px; border-radius: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; font-size: 15px; font-family: inherit; direction: rtl; line-height: 1.7; resize: vertical; }
+.preview-actions { display: flex; gap: 8px; width: 100%; max-width: 400px; flex-wrap: wrap; justify-content: center; }
+.preview-actions .btn { padding: 10px; font-size: 13px; flex: 1; min-width: 100px; }
+.toggle-row { display: flex; gap: 10px; width: 100%; }
+
+/* ✅ تحسينات لمس iOS */
+.toggle-btn {
+  flex: 1;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 2px solid #718096;
+  background: rgba(255,255,255,0.1);
+  color: #cbd5e0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: rgba(255,255,255,0.2);
+  transition: all 0.15s;
+  position: relative;
+  z-index: 10;
+  min-height: 48px;
+}
+.toggle-btn:active { transform: scale(0.96); background: rgba(255,255,255,0.2); }
+.toggle-btn.on {
+  background: #2f855a;
+  border-color: #2f855a;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(47,133,90,0.3);
+}
+.toggle-btn.off {
+  background: #718096;
+  border-color: #718096;
+  color: #fff;
+}
+.toggle-btn:disabled { opacity: 0.5; }
 </style>
 </head>
 <body>
@@ -103,24 +138,24 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 
 <div id="imgPreview" class="img-preview hidden">
   <div class="style-picker">
-    <button class="style-chip" data-style="naskh">📜 نسخي فاخر</button>
-    <button class="style-chip" data-style="oriental">🌙 شرقي</button>
-    <button class="style-chip" data-style="classic">🏛️ كلاسيكي</button>
-    <button class="style-chip" data-style="modern">⚡ حديث</button>
+    <button type="button" class="style-chip" data-style="naskh">📜 نسخي فاخر</button>
+    <button type="button" class="style-chip" data-style="oriental">🌙 شرقي</button>
+    <button type="button" class="style-chip" data-style="classic">🏛️ كلاسيكي</button>
+    <button type="button" class="style-chip" data-style="modern">⚡ حديث</button>
   </div>
   <img id="previewImg" alt="preview">
   <div id="editPanel" class="hidden">
     <textarea id="editTextarea" placeholder="عدّل النص هنا..."></textarea>
     <div class="toggle-row">
-      <button id="toggleBookBtn" class="toggle-btn on">📖 اسم الكتاب</button>
-      <button id="toggleAuthorBtn" class="toggle-btn on">✍ المؤلف</button>
+      <button type="button" id="toggleBookBtn" class="toggle-btn on">📖 اسم الكتاب</button>
+      <button type="button" id="toggleAuthorBtn" class="toggle-btn on">✍ المؤلف</button>
     </div>
   </div>
   <div class="preview-actions">
-    <button id="editQuoteBtn" class="btn btn-purple">✏️ تعديل النص</button>
-    <button id="regenBtn" class="btn btn-green hidden">🎨 توليد الصورة</button>
-    <button id="shareImgBtn" class="btn btn-blue">📤 مشاركة</button>
-    <button onclick="closePreview()" class="btn btn-red">إغلاق</button>
+    <button type="button" id="editQuoteBtn" class="btn btn-purple">✏️ تعديل النص</button>
+    <button type="button" id="regenBtn" class="btn btn-green hidden">🎨 توليد الصورة</button>
+    <button type="button" id="shareImgBtn" class="btn btn-blue">📤 مشاركة</button>
+    <button type="button" onclick="closePreview()" class="btn btn-red">إغلاق</button>
   </div>
 </div>
 
@@ -173,6 +208,8 @@ let state = {
   currentImageText: '', currentImageBlob: null,
   editMode: false, editedText: '',
   showBook: true, showAuthor: true,
+  // ✅ حفظ آخر variant مستخدم لإعادة الاستخدام عند toggle
+  currentVariantIdx: null,
 };
 
 let fontsReady = false;
@@ -196,23 +233,21 @@ async function ensureFonts() {
   } catch (e) { fontsReady = true; }
 }
 
-function loadLibrary() { try { [
- const d = localStorage.getItem(STOR     AGE {_KEY); state.library = d ? JSON color.parse(d) : []; } catch (e): { state.library = []; } }
-function saveLibrary '#() { try { localStorage.setItem(STORAGE_KEYb, JSON.stringify(state.library)); } catch (e)894 {} }
-function toast(msg, ms) {5 const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(el._at); el._t = setTimeout(() => el.classList.remove('show'),', ms || 2200); }
-function setStatus(t, c) width { const el = document.getElementById('status'); el.textContent = t:; el.className = ' status' + (c ? ' '4 + c : ''); }
-function show,Progress(s, p) { const inset w = document.getElementById('progressWrap'); const b =: document.getElementById('progressBar'); w.classList.toggle('hidden ', !s); if (p !== undefined) b.style.width = p + '%'; }
+function loadLibrary() { try { const d = localStorage.getItem(STORAGE_KEY); state.library = d ? JSON.parse(d) : []; } catch (e) { state.library = []; } }
+function saveLibrary() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.library)); } catch (e) {} }
+function toast(msg, ms) { const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), ms || 2200); }
+function setStatus(t, c) { const el = document.getElementById('status'); el.textContent = t; el.className = 'status' + (c ? ' ' + c : ''); }
+function showProgress(s, p) { const w = document.getElementById('progressWrap'); const b = document.getElementById('progressBar'); w.classList.toggle('hidden', !s); if (p !== undefined) b.style.width = p + '%'; }
 
-function load40ApiKey() {
+function loadApiKey() {
   try {
- },
-    const k = localStorage.getItem(API     _KEY_STORAGE); if (k {) document.getElementById('apiKey'). colorvalue = k;
-    const a = localStorage.getItem(AUTHOR_STORAGE); if (a): { document.getElementById('authorName').value = a; state.authorName = a '; }
-    const s = localStorage.getItem(STrgYLE_STORAGE);
-    if (s && STYLEba_NAMES[s]) { state.imageStyle = s; document(.getElementById('styleBtn').textContent = '🎨 ' + STYLE_184NAMES[s].split(' ').slice(1).join(', '); }
-  } catch (e148) {}
+    const k = localStorage.getItem(API_KEY_STORAGE); if (k) document.getElementById('apiKey').value = k;
+    const a = localStorage.getItem(AUTHOR_STORAGE); if (a) { document.getElementById('authorName').value = a; state.authorName = a; }
+    const s = localStorage.getItem(STYLE_STORAGE);
+    if (s && STYLE_NAMES[s]) { state.imageStyle = s; document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[s].split(' ').slice(1).join(' '); }
+  } catch (e) {}
 }
-function saveApiKey,(k) { try { localStorage90.setItem(API_KEY_STOR,AGE, k); } catch (e)0 {} }
+function saveApiKey(k) { try { localStorage.setItem(API_KEY_STORAGE, k); } catch (e) {} }
 function saveAuthor(a) { try { localStorage.setItem(AUTHOR_STORAGE, a); } catch (e) {} }
 function saveStyle(s) { try { localStorage.setItem(STYLE_STORAGE, s); } catch (e) {} }
 
@@ -556,7 +591,6 @@ function buildQuoteSVG(opts) {
 
   s += buildDividerSVG(cx, bottomDivider, config.bottomDividerWidth || 240, config.ornamentColor);
 
-  // ✅ الكتاب والمؤلف مشروطان
   if (showBook && bookName) {
     const bookText = '\u{1F4D6} \uFD3F ' + bookName + ' \uFD3E';
     s += `<text x="${cx}" y="${H - 200}" font-family="${FONT_FAMILY}" font-weight="700" font-size="36" fill="${config.bookColor}" text-anchor="middle" direction="rtl">${escapeXml(bookText)}</text>`;
@@ -622,7 +656,9 @@ const STYLE_CONFIGS = {
   classic: {
     bgColors: ['#f7efdd', '#f2e6cd', '#e9d8b5'],
     vignette: ['rgba(255,248,232,0.45)', 'rgba(120,90,50,0.18)'],
-    frames:.55)', width: 1, inset: 60 },
+    frames: [
+      { color: '#b8945a', width: 4, inset: 40 },
+      { color: 'rgba(184,148,90,0.55)', width: 1, inset: 60 },
     ],
     cornerColor: '#b8945a', cornerSize: 120, cornerInset: 60,
     ornamentColor: '#b8945a', quoteMarkColor: 'rgba(30, 58, 95, 0.85)',
@@ -658,9 +694,19 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
   const W = 1080, H = 1920;
   const config = STYLE_CONFIGS[style] || STYLE_CONFIGS.naskh;
   const totalVariants = config.variants.length;
-  const variant = (typeof forceVariantIdx === 'number')
-    ? config.variants[forceVariantIdx % totalVariants]
-    : config.variants[nextVariant(totalVariants)];
+
+  // ✅ استخدام forceVariantIdx إذا مررنا (للحفاظ على نفس النمط عند toggle)
+  let variantIdx;
+  if (typeof forceVariantIdx === 'number') {
+    variantIdx = forceVariantIdx % totalVariants;
+  } else if (typeof state.currentVariantIdx === 'number' && state.currentVariantIdx !== null) {
+    // احتفظ بنفس variant عند إعادة التوليد بنفس النمط
+    variantIdx = state.currentVariantIdx % totalVariants;
+  } else {
+    variantIdx = nextVariant(totalVariants);
+  }
+  state.currentVariantIdx = variantIdx;
+  const variant = config.variants[variantIdx];
 
   const layout = computeOptimalLayout(text, W, H, config, variant);
   const fontSize = layout.fontSize;
@@ -737,6 +783,8 @@ async function showQuoteImage(text, style) {
     state.currentImageText = text;
     state.editedText = text;
     state.editMode = false;
+    // ✅ عند فتح صورة جديدة، أعِد variant للحالة الافتراضية
+    state.currentVariantIdx = null;
     const useStyle = style || state.imageStyle;
     const blob = await generateQuoteImage(state.editedText, state.pdfName, state.authorName, useStyle);
     state.currentImageBlob = blob;
@@ -775,17 +823,29 @@ function updateToggleUI() {
   const b = document.getElementById('toggleBookBtn');
   const a = document.getElementById('toggleAuthorBtn');
   b.classList.toggle('on', state.showBook);
+  b.classList.toggle('off', !state.showBook);
   a.classList.toggle('on', state.showAuthor);
+  a.classList.toggle('off', !state.showAuthor);
   b.textContent = (state.showBook ? '📖 ' : '🚫 ') + 'اسم الكتاب';
   a.textContent = (state.showAuthor ? '✍ ' : '🚫 ') + 'المؤلف';
 }
 
-async function regenerateFromEdit() {
+// ✅ دالة إعادة توليد مشتركة (تعمل بعد التعديل أو toggle)
+async function regenerateCurrent() {
+  if (state.busy) return;
+  state.busy = true;
   const ta = document.getElementById('editTextarea');
   const newText = (ta.value || '').trim();
-  if (!newText) { toast('❌ النص فارغ'); return; }
+  if (!newText) { toast('❌ النص فارغ'); state.busy = false; return; }
   state.editedText = newText;
+
   setStatus('جاري إعادة التوليد...');
+  // عطّل الأزرار مؤقتًا
+  document.getElementById('toggleBookBtn').disabled = true;
+  document.getElementById('toggleAuthorBtn').disabled = true;
+  document.getElementById('regenBtn').disabled = true;
+  document.getElementById('regenBtn').textContent = '⏳ جاري التوليد...';
+
   try {
     const blob = await generateQuoteImage(state.editedText, state.pdfName, state.authorName, state.imageStyle);
     state.currentImageBlob = blob;
@@ -801,6 +861,13 @@ async function regenerateFromEdit() {
   } catch (e) {
     setStatus('فشل', 'err');
     toast('❌ ' + e.message);
+    showErr('regen: ' + e.message);
+  } finally {
+    document.getElementById('toggleBookBtn').disabled = false;
+    document.getElementById('toggleAuthorBtn').disabled = false;
+    document.getElementById('regenBtn').disabled = false;
+    document.getElementById('regenBtn').textContent = '🎨 توليد الصورة';
+    state.busy = false;
   }
 }
 
@@ -990,23 +1057,31 @@ function initApp() {
       chip.addEventListener('click', async () => {
         state.imageStyle = chip.dataset.style;
         saveStyle(state.imageStyle);
+        state.currentVariantIdx = null; // ✅ عند تغيير النمط، اختر variant جديد
         document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
         await showQuoteImage(state.editedText || state.currentImageText, state.imageStyle);
       });
     });
 
     document.getElementById('editQuoteBtn').addEventListener('click', enterEditMode);
-    document.getElementById('regenBtn').addEventListener('click', regenerateFromEdit);
+    document.getElementById('regenBtn').addEventListener('click', regenerateCurrent);
 
-    // ✅ أزرار إخفاء الكتاب والمؤلف
-    document.getElementById('toggleBookBtn').addEventListener('click', () => {
+    // ✅ أزرار toggle تعيد التوليد فورًا
+    document.getElementById('toggleBookBtn').addEventListener('click', async () => {
       state.showBook = !state.showBook;
       updateToggleUI();
+      toast(state.showBook ? '📖 إظهار اسم الكتاب' : '🚫 إخفاء اسم الكتاب', 1200);
+      await regenerateCurrent();
     });
-    document.getElementById('toggleAuthorBtn').addEventListener('click', () => {
+    document.getElementById('toggleAuthorBtn').addEventListener('click', async () => {
       state.showAuthor = !state.showAuthor;
       updateToggleUI();
+      toast(state.showAuthor ? '✍ إظهار المؤلف' : '🚫 إخفاء المؤلف', 1200);
+      await regenerateCurrent();
     });
+
+    // ✅ تهيئة الأزرار عند فتح الصفحة
+    updateToggleUI();
   } catch (e) {
     showErr('init: ' + e.message);
   }
