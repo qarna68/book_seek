@@ -80,7 +80,6 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .toggle-btn.off { background: #718096; border-color: #718096; color: #fff; }
 .toggle-btn:disabled { opacity: 0.5; }
 
-/* ✅ شاشة توليد الفيديو */
 .video-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
 .video-box { background: #1a202c; color: #fff; padding: 20px; border-radius: 16px; max-width: 400px; width: 100%; text-align: center; }
 .video-box h3 { font-size: 16px; margin-bottom: 12px; }
@@ -90,9 +89,13 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .video-percent { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #b8945a; }
 .video-status { font-size: 12px; opacity: 0.7; }
 #videoPlayer { width: 100%; max-height: 50vh; border-radius: 12px; margin-bottom: 14px; background: #000; }
-.video-hint { font-size: 11px; opacity: 0.65; margin-top: 14px; line-height: 1.7; color: #cbd5e0; }
+#videoFallback { width: 100%; max-height: 50vh; border-radius: 12px; margin-bottom: 14px; object-fit: contain; }
+.video-hint { font-size: 11px; opacity: 0.75; margin-top: 14px; line-height: 1.7; color: #cbd5e0; }
 .video-btn-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
 .video-btn-row .btn { flex: 1; min-width: 110px; max-width: none; padding: 12px; font-size: 13px; }
+.format-badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; margin-bottom: 10px; }
+.format-badge.ok { background: rgba(47,133,90,0.2); color: #68d391; }
+.format-badge.warn { background: rgba(214,158,46,0.2); color: #f6e05e; }
 </style>
 </head>
 <body>
@@ -169,17 +172,18 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   </div>
 </div>
 
-<!-- ✅ شاشة معاينة الفيديو -->
 <div id="videoPreview" class="video-overlay hidden">
   <div class="video-box">
     <h3>🎬 الفيديو جاهز</h3>
-    <video id="videoPlayer" controls playsinline></video>
+    <div id="formatBadge" class="format-badge ok"></div>
+    <video id="videoPlayer" controls playsinline style="display:none;"></video>
+    <img id="videoFallback" alt="preview" style="display:none;">
     <div class="video-btn-row">
       <button type="button" id="shareVideoBtn" class="btn btn-blue">📤 مشاركة</button>
       <button type="button" id="downloadVideoBtn" class="btn btn-gold">💾 حفظ في الملفات</button>
       <button type="button" id="closeVideoBtn" class="btn btn-red">إغلاق</button>
     </div>
-    <p class="video-hint">💡 <b>لحفظ الفيديو في تطبيق الصور:</b><br>اضغط "📤 مشاركة" ثم اختر "حفظ الفيديو" من قائمة النظام.</p>
+    <p class="video-hint" id="videoHint"></p>
   </div>
 </div>
 
@@ -212,14 +216,8 @@ const STYLE_STORAGE = 'quotes_style';
 const VARIANT_STORAGE = 'quotes_variant_index';
 
 const STYLE_NAMES = {
-  naskh: '📜 نسخي فاخر',
-  oriental: '🌙 شرقي',
-  classic: '🏛️ كلاسيكي',
-  modern: '⚡ حديث',
-  islamic: '🕌 إسلامي مزخرف',
-  night: '🌌 ليلي بنجوم',
-  news: '📰 خبر عاجل',
-  emerald: '💡 نصيحة زمردي',
+  naskh: '📜 نسخي فاخر', oriental: '🌙 شرقي', classic: '🏛️ كلاسيكي', modern: '⚡ حديث',
+  islamic: '🕌 إسلامي مزخرف', night: '🌌 ليلي بنجوم', news: '📰 خبر عاجل', emerald: '💡 نصيحة زمردي',
 };
 const STYLE_ORDER = ['naskh', 'oriental', 'classic', 'modern', 'islamic', 'night', 'news', 'emerald'];
 
@@ -248,6 +246,7 @@ let state = {
   showQuote: true, showBook: true, showAuthor: true,
   currentVariantIdx: null,
   currentVideoBlob: null, currentVideoMime: '', currentVideoUrl: '',
+  lastFrameDataUrl: '',
 };
 
 let fontsReady = false;
@@ -282,10 +281,7 @@ function loadApiKey() {
     const k = localStorage.getItem(API_KEY_STORAGE); if (k) document.getElementById('apiKey').value = k;
     const a = localStorage.getItem(AUTHOR_STORAGE); if (a) { document.getElementById('authorName').value = a; state.authorName = a; }
     const s = localStorage.getItem(STYLE_STORAGE);
-    if (s && STYLE_NAMES[s]) {
-      state.imageStyle = s;
-      document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[s].split(' ').slice(1).join(' ');
-    }
+    if (s && STYLE_NAMES[s]) { state.imageStyle = s; document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[s].split(' ').slice(1).join(' '); }
   } catch (e) {}
 }
 function saveApiKey(k) { try { localStorage.setItem(API_KEY_STORAGE, k); } catch (e) {} }
@@ -860,13 +856,9 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
   const totalVariants = config.variants.length;
 
   let variantIdx;
-  if (typeof forceVariantIdx === 'number') {
-    variantIdx = forceVariantIdx % totalVariants;
-  } else if (typeof state.currentVariantIdx === 'number' && state.currentVariantIdx !== null) {
-    variantIdx = state.currentVariantIdx % totalVariants;
-  } else {
-    variantIdx = nextVariant(totalVariants);
-  }
+  if (typeof forceVariantIdx === 'number') variantIdx = forceVariantIdx % totalVariants;
+  else if (typeof state.currentVariantIdx === 'number' && state.currentVariantIdx !== null) variantIdx = state.currentVariantIdx % totalVariants;
+  else variantIdx = nextVariant(totalVariants);
   state.currentVariantIdx = variantIdx;
   const variant = config.variants[variantIdx];
 
@@ -890,9 +882,7 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
     svg += `<rect width="${W}" height="${H}" fill="#fefefe"/>`;
     svg += `<rect x="0" y="0" width="14" height="${H}" fill="#0f172a"/>`;
     svg += `<rect x="14" y="0" width="6" height="${H}" fill="#2b6cb0"/>`;
-    if (state.showQuote) {
-      svg += `<text x="50" y="260" font-family="-apple-system, system-ui, sans-serif" font-weight="bold" font-size="280" fill="#0f172a" text-anchor="start">&#8220;</text>`;
-    }
+    if (state.showQuote) svg += `<text x="50" y="260" font-family="-apple-system, system-ui, sans-serif" font-weight="bold" font-size="280" fill="#0f172a" text-anchor="start">&#8220;</text>`;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]; if (!line) continue;
       const y = startY + i * lineHeight + fontSize * 0.85;
@@ -904,33 +894,21 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
     if (state.showBook && bookName) svg += `<text x="${cx}" y="${lineY + 60}" font-family="-apple-system, ${FONT_FAMILY}" font-weight="700" font-size="32" fill="#0f172a" text-anchor="middle" direction="rtl">📖 ${escapeXml(bookName)}</text>`;
     if (state.showAuthor && authorName) svg += `<text x="${cx}" y="${lineY + 110}" font-family="-apple-system, ${FONT_FAMILY}" font-size="26" fill="#64748b" text-anchor="middle" direction="rtl">✍ ${escapeXml(authorName)}</text>`;
     const wm = [{x:W*0.25,y:H*0.18},{x:W*0.75,y:H*0.36},{x:W*0.28,y:H*0.58},{x:W*0.72,y:H*0.78}];
-    for (const p of wm) {
-      svg += `<text transform="translate(${p.x.toFixed(0)} ${p.y.toFixed(0)}) rotate(-22)" font-family="-apple-system, system-ui" font-weight="700" font-size="34" fill="#0f172a" opacity="0.07" text-anchor="middle">sab3-77</text>`;
-    }
+    for (const p of wm) svg += `<text transform="translate(${p.x.toFixed(0)} ${p.y.toFixed(0)}) rotate(-22)" font-family="-apple-system, system-ui" font-weight="700" font-size="34" fill="#0f172a" opacity="0.07" text-anchor="middle">sab3-77</text>`;
     svg += `</svg>`;
   } else {
-    svg = buildQuoteSVG({
-      W, H, lines, fontSize, lineHeight,
-      startY, topDivider, bottomDivider,
-      bookName, authorName, config, variant,
-      showQuote: state.showQuote,
-      showBook: state.showBook,
-      showAuthor: state.showAuthor,
-    });
+    svg = buildQuoteSVG({ W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant, showQuote: state.showQuote, showBook: state.showBook, showAuthor: state.showAuthor });
   }
 
   const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
   const svgUrl = URL.createObjectURL(svgBlob);
-
   const img = new Image();
   img.crossOrigin = 'anonymous';
-
   await new Promise((resolve, reject) => {
     img.onload = resolve;
     img.onerror = () => { URL.revokeObjectURL(svgUrl); reject(new Error('فشل تحميل SVG')); };
     img.src = svgUrl;
   });
-
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -938,7 +916,6 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
   ctx.fillRect(0, 0, W, H);
   ctx.drawImage(img, 0, 0, W, H);
   URL.revokeObjectURL(svgUrl);
-
   return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
 }
 
@@ -978,15 +955,10 @@ async function showQuoteImage(text, style) {
     document.getElementById('regenBtn').classList.add('hidden');
     document.getElementById('imgPreview').classList.remove('hidden');
     document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
-    document.querySelectorAll('.style-chip').forEach(c => {
-      c.classList.toggle('active', c.dataset.style === useStyle);
-    });
+    document.querySelectorAll('.style-chip').forEach(c => c.classList.toggle('active', c.dataset.style === useStyle));
     setStatus('تم توليد الصورة ✨', 'ok');
   } catch (e) {
-    if (myId === generateId) {
-      setStatus('فشل توليد الصورة', 'err');
-      toast('❌ ' + e.message);
-    }
+    if (myId === generateId) { setStatus('فشل توليد الصورة', 'err'); toast('❌ ' + e.message); }
   } finally {
     generateLock = false;
     document.querySelectorAll('.style-chip').forEach(c => c.disabled = false);
@@ -996,8 +968,7 @@ async function showQuoteImage(text, style) {
 function enterEditMode() {
   state.editMode = true;
   state.editedText = state.editedText || state.currentImageText;
-  const ta = document.getElementById('editTextarea');
-  ta.value = state.editedText;
+  document.getElementById('editTextarea').value = state.editedText;
   document.getElementById('previewImg').classList.add('hidden');
   document.getElementById('editPanel').classList.remove('hidden');
   document.getElementById('editQuoteBtn').classList.add('hidden');
@@ -1010,12 +981,9 @@ function updateToggleUI() {
   const q = document.getElementById('toggleQuoteBtn');
   const b = document.getElementById('toggleBookBtn');
   const a = document.getElementById('toggleAuthorBtn');
-  q.classList.toggle('on', state.showQuote);
-  q.classList.toggle('off', !state.showQuote);
-  b.classList.toggle('on', state.showBook);
-  b.classList.toggle('off', !state.showBook);
-  a.classList.toggle('on', state.showAuthor);
-  a.classList.toggle('off', !state.showAuthor);
+  q.classList.toggle('on', state.showQuote); q.classList.toggle('off', !state.showQuote);
+  b.classList.toggle('on', state.showBook); b.classList.toggle('off', !state.showBook);
+  a.classList.toggle('on', state.showAuthor); a.classList.toggle('off', !state.showAuthor);
   q.textContent = (state.showQuote ? '❝ ' : '🚫 ') + 'علامة';
   b.textContent = (state.showBook ? '📖 ' : '🚫 ') + 'الكتاب';
   a.textContent = (state.showAuthor ? '✍ ' : '🚫 ') + 'المؤلف';
@@ -1024,11 +992,9 @@ function updateToggleUI() {
 async function regenerateCurrent() {
   if (state.busy) return;
   state.busy = true;
-  const ta = document.getElementById('editTextarea');
-  const newText = (ta.value || '').trim();
+  const newText = (document.getElementById('editTextarea').value || '').trim();
   if (!newText) { toast('❌ النص فارغ'); state.busy = false; return; }
   state.editedText = newText;
-
   setStatus('جاري إعادة التوليد...');
   const tQ = document.getElementById('toggleQuoteBtn');
   const tB = document.getElementById('toggleBookBtn');
@@ -1036,7 +1002,6 @@ async function regenerateCurrent() {
   const rB = document.getElementById('regenBtn');
   tQ.disabled = true; tB.disabled = true; tA.disabled = true; rB.disabled = true;
   rB.textContent = '⏳ جاري...';
-
   try {
     const blob = await generateQuoteImage(state.editedText, state.pdfName, state.authorName, state.imageStyle);
     state.currentImageBlob = blob;
@@ -1050,10 +1015,8 @@ async function regenerateCurrent() {
     document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
     state.editMode = false;
     setStatus('تم التوليد ✨', 'ok');
-  } catch (e) {
-    setStatus('فشل', 'err');
-    toast('❌ ' + e.message);
-  } finally {
+  } catch (e) { setStatus('فشل', 'err'); toast('❌ ' + e.message); }
+  finally {
     tQ.disabled = false; tB.disabled = false; tA.disabled = false; rB.disabled = false;
     rB.textContent = '🎨 توليد';
     state.busy = false;
@@ -1067,22 +1030,31 @@ function updateVideoProgress(percent, statusText) {
   if (statusText) document.getElementById('videoStatus').textContent = statusText;
 }
 
-// ✅ تفضيل MP4 أولًا (يدعم iOS Photos)
+// ✅ محاولة أقوى لإنتاج MP4
 function pickBestMimeType() {
   const candidates = [
-    'video/mp4;codecs=avc1.42E01E', // H.264 baseline - iOS Photos compatible
+    // MP4 H.264 - أفضل خيار للصور (iOS 17.4+)
+    'video/mp4;codecs=avc1.64001E',
+    'video/mp4;codecs=avc1.4D401E',
+    'video/mp4;codecs=avc1.42E01E',
+    'video/mp4;codecs=h264',
     'video/mp4;codecs=avc1',
     'video/mp4',
+    // WebM احتياطي
     'video/webm;codecs=vp9',
     'video/webm;codecs=vp8',
     'video/webm',
   ];
   for (const c of candidates) {
-    try {
-      if (MediaRecorder.isTypeSupported(c)) return c;
-    } catch (e) {}
+    try { if (MediaRecorder.isTypeSupported(c)) return c; } catch (e) {}
   }
   return 'video/webm';
+}
+
+function canPlayVideoType(mimeType) {
+  const v = document.createElement('video');
+  const result = v.canPlayType(mimeType);
+  return result === 'probably' || result === 'maybe';
 }
 
 async function generateQuoteVideo(rawText, style) {
@@ -1123,9 +1095,8 @@ async function generateQuoteVideo(rawText, style) {
   }
 
   function buildVideoFrameSVG(upToWords) {
-    const partialLines = buildPartialLines(upToWords);
     return buildQuoteSVG({
-      W, H, lines: partialLines, fontSize, lineHeight,
+      W, H, lines: buildPartialLines(upToWords), fontSize, lineHeight,
       startY, topDivider, bottomDivider,
       bookName: state.showBook ? state.pdfName : '',
       authorName: state.showAuthor ? state.authorName : '',
@@ -1146,13 +1117,22 @@ async function generateQuoteVideo(rawText, style) {
   const revokeUrls = [];
   for (let i = 0; i < frameWordCounts.length; i++) {
     updateVideoProgress(0.05 + (i / frameWordCounts.length) * 0.55, `رسم الصور... ${i + 1}/${frameWordCounts.length}`);
-    const svg = buildVideoFrameSVG(frameWordCounts[i]);
-    const { img, url } = await svgToImage(svg);
+    const { img, url } = await svgToImage(buildVideoFrameSVG(frameWordCounts[i]));
     revokeUrls.push(url);
     prerenderedImages.push(img);
     await new Promise(r => setTimeout(r, 10));
   }
 
+  // ✅ استخراج آخر إطار كصورة ثابتة (fallback)
+  const lastFrameCanvas = document.createElement('canvas');
+  lastFrameCanvas.width = W; lastFrameCanvas.height = H;
+  const lfc = lastFrameCanvas.getContext('2d');
+  lfc.fillStyle = '#ffffff';
+  lfc.fillRect(0, 0, W, H);
+  lfc.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
+  state.lastFrameDataUrl = lastFrameCanvas.toDataURL('image/png');
+
+  // تحضير Canvas للتسجيل
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -1166,7 +1146,6 @@ async function generateQuoteVideo(rawText, style) {
   const TOTAL_MS = TEXT_DURATION_MS + HOLD_MS;
 
   const stream = canvas.captureStream(FPS);
-
   const mimeType = pickBestMimeType();
 
   let recorder;
@@ -1202,29 +1181,16 @@ async function generateQuoteVideo(rawText, style) {
   return new Promise((resolve, reject) => {
     try {
       recorder.start();
-
       const startTime = performance.now();
       let lastFrame = -1;
-
       function tick() {
         const elapsed = performance.now() - startTime;
-
-        if (elapsed >= TOTAL_MS) {
-          try { recorder.stop(); } catch (e) { reject(e); }
-          return;
-        }
-
+        if (elapsed >= TOTAL_MS) { try { recorder.stop(); } catch (e) { reject(e); } return; }
         const currentFrame = Math.floor((elapsed / 1000) * FPS);
-        if (currentFrame !== lastFrame) {
-          lastFrame = currentFrame;
-          drawFrameAt(elapsed);
-        }
-
+        if (currentFrame !== lastFrame) { lastFrame = currentFrame; drawFrameAt(elapsed); }
         updateVideoProgress(0.6 + (elapsed / TOTAL_MS) * 0.4, `التسجيل... ${((elapsed/TOTAL_MS)*100).toFixed(0)}%`);
-
         requestAnimationFrame(tick);
       }
-
       recorder.onstop = () => {
         try {
           const blob = new Blob(chunks, { type: mimeType });
@@ -1232,9 +1198,7 @@ async function generateQuoteVideo(rawText, style) {
           resolve({ blob, mimeType });
         } catch (e) { reject(e); }
       };
-
       recorder.onerror = () => reject(new Error('فشل التسجيل'));
-
       tick();
     } catch (e) {
       revokeUrls.forEach(u => URL.revokeObjectURL(u));
@@ -1243,24 +1207,16 @@ async function generateQuoteVideo(rawText, style) {
   });
 }
 
-// ✅ مشاركة الفيديو (يفتح Share Sheet - يظهر "حفظ الفيديو" إذا كان MP4)
 async function shareVideoFile(blob, mimeType) {
   const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
   const file = new File([blob], 'quote.' + ext, { type: mimeType });
-
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: 'اقتباس' });
-      return true;
-    } catch (e) {
-      if (e.name === 'AbortError') return true; // المستخدم أغلق
-      return false;
-    }
+    try { await navigator.share({ files: [file], title: 'اقتباس' }); return true; }
+    catch (e) { if (e.name === 'AbortError') return true; return false; }
   }
   return false;
 }
 
-// ✅ تحميل للملفات
 function downloadVideoFile(blob, mimeType) {
   const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
   const url = URL.createObjectURL(blob);
@@ -1288,28 +1244,50 @@ async function handleVideoGeneration() {
 
   try {
     const { blob, mimeType } = await generateQuoteVideo(state.editedText || state.currentImageText, state.imageStyle);
-
-    // احفظ الحالة
     state.currentVideoBlob = blob;
     state.currentVideoMime = mimeType;
 
-    // أغلق شاشة التحميل
     document.getElementById('videoOverlay').classList.add('hidden');
 
-    // افتح شاشة المعاينة
     if (state.currentVideoUrl) URL.revokeObjectURL(state.currentVideoUrl);
     state.currentVideoUrl = URL.createObjectURL(blob);
+
+    // ✅ تحديد ما إذا كان الفيديو قابلاً للمعاينة
+    const playable = canPlayVideoType(mimeType);
+    const isMp4 = mimeType.includes('mp4');
+
     const videoEl = document.getElementById('videoPlayer');
-    videoEl.src = state.currentVideoUrl;
+    const fallbackImg = document.getElementById('videoFallback');
+    const formatBadge = document.getElementById('formatBadge');
+    const hint = document.getElementById('videoHint');
+
+    if (playable) {
+      videoEl.src = state.currentVideoUrl;
+      videoEl.style.display = 'block';
+      fallbackImg.style.display = 'none';
+      formatBadge.textContent = '✅ ' + (isMp4 ? 'MP4 — قابل للمعاينة والحفظ في الصور' : 'WebM — قابل للمعاينة');
+      formatBadge.className = 'format-badge ok';
+      hint.innerHTML = isMp4
+        ? '💡 <b>لحفظ الفيديو في تطبيق الصور:</b><br>اضغط "📤 مشاركة" ثم اختر <b>"حفظ الفيديو"</b> من قائمة iOS.'
+        : '💡 <b>للمشاركة:</b> اضغط "📤 مشاركة" لإرساله على WhatsApp/Telegram.<br>⚠️ لحفظه في الصور، استخدم CapCut لتحويله إلى MP4.';
+    } else {
+      // ✅ عرض صورة ثابتة بدل الفيديو
+      videoEl.style.display = 'none';
+      fallbackImg.src = state.lastFrameDataUrl;
+      fallbackImg.style.display = 'block';
+      formatBadge.textContent = '⚠️ صيغة ' + (isMp4 ? 'MP4' : 'WebM') + ' — المعاينة غير مدعومة في Safari';
+      formatBadge.className = 'format-badge warn';
+      hint.innerHTML = '💡 <b>الفيديو جاهز لكن Safari لا يمكنه معاينته.</b><br>' +
+        '• للمشاركة المباشرة: اضغط "📤 مشاركة".<br>' +
+        '• للحفظ في الصور: اضغط "💾 حفظ في الملفات" ثم افتحه في <b>CapCut</b> أو <b>InShot</b> وحوّله MP4.';
+    }
+
     document.getElementById('videoPreview').classList.remove('hidden');
 
-    // اربط الأزرار
     document.getElementById('shareVideoBtn').onclick = async () => {
       toast('📤 جاري فتح قائمة المشاركة...', 1500);
       const ok = await shareVideoFile(blob, mimeType);
-      if (!ok) {
-        toast('❌ تعذر فتح المشاركة — استخدم "حفظ في الملفات"', 2500);
-      }
+      if (!ok) toast('❌ تعذر — استخدم "حفظ في الملفات"', 2500);
     };
     document.getElementById('downloadVideoBtn').onclick = () => {
       downloadVideoFile(blob, mimeType);
