@@ -75,7 +75,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   <button id="pickPdfBtn" class="btn btn-dark" style="width:100%; margin-bottom:10px;">📕 اختيار ملف PDF</button>
   <input id="pdfInput" type="file" accept=".pdf" style="display:none;">
   <div class="row">
-    <button id="countBtn" class="btn btn-gray">🔢 10</button>
+    <button id="countBtn" class="btn btn-gray">🔢 5</button>
     <button id="styleBtn" class="btn btn-gold">🎨 نسخي</button>
     <button id="libBtn" class="btn btn-purple">📚 المكتبة</button>
   </div>
@@ -161,7 +161,7 @@ function nextVariant(total) {
 
 let state = {
   pdfFile: null, pdfText: '', pdfName: '', authorName: '',
-  quotes: [], quoteCount: 10, library: [], currentHeader: '',
+  quotes: [], quoteCount: 5, library: [], currentHeader: '',
   busy: false, imageStyle: 'naskh',
   currentImageText: '', currentImageBlob: null,
   editMode: false, editedText: '',
@@ -287,24 +287,32 @@ const MODELS = ['openai/gpt-oss-120b', 'google/gemini-2.5-flash', 'meta-llama/ll
 
 async function callOpenRouter(apiKey, bookName, bookText, count) {
   const seed = Math.floor(Math.random() * 9000) + 1000;
-  const prompt = `أنت مساعد متخصص في استخراج الاقتباسات الحرفية من الكتب العربية.
+  // ✅ prompt محدّث: فقرات طويلة (3-5 جمل، 40-90 كلمة)
+  const prompt = `أنت مساعد متخصص في استخراج الاقتباسات الفكرية من الكتب العربية.
 
-تحذيرات مهمة:
-- النص المرفق قد يحتوي على رموز غريبة أو أحرف صينية أو unk.
-- تجاهل تماماً أي محتوى غير عربي.
+تعليمات مهمة جداً:
+- النص المرفق قد يحتوي على رموز غريبة أو أحرف صينية أو unk — تجاهلها.
 - اكتب بالعربية الفصحى فقط.
 
 اسم الكتاب: ${bookName || 'غير مذكور'}
 رمز التنويع: ${seed}
 
-المطلوب: استخرج ${count} اقتباسات قصيرة وعميقة ومختلفة.
+⚠️ الأهم في هذه المهمة: أن يكون كل اقتباس **فقرة كاملة** تنقل فكرة متكاملة للقارئ.
 
-تعليمات الإخراج الصارمة:
-1. ابدأ القائمة مباشرة بالاقتباس الأول.
-2. عربي فقط.
-3. طابق النص حرفياً.
-4. رقّم من 1 إلى ${count}.
-5. اذكر رقم الصفحة بصيغة [صفحة X].
+الشروط:
+1. كل اقتباس يجب أن يتكون من **3 إلى 5 جمل مترابطة** (40-90 كلمة).
+2. الاقتباس يجب أن ينقل **فكرة كاملة** يفهمها القارئ بدون الرجوع للكتاب.
+3. اختر مقاطع تبدأ بجملة تمهيدية وتنتهي بخاتمة أو نتيجة.
+4. ركّز على الأفكار القوية: النفسية، الفلسفية، الاجتماعية، التطويرية.
+5. عربي فقط، طابق النص حرفياً بدون اختلاق.
+
+المطلوب: استخرج ${count} اقتباسات فكرية طويلة من النص المرفق.
+
+تعليمات الإخراج:
+- ابدأ القائمة مباشرة.
+- رقّم من 1 إلى ${count}.
+- ضع سطراً فارغاً بين كل اقتباسين.
+- لا تكتب أي شيء آخر غير الاقتباسات.
 
 نص الكتاب:
 ${bookText}`;
@@ -315,12 +323,12 @@ ${bookText}`;
       const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'HTTP-Referer': location.origin, 'X-Title': 'Arabic Quotes Extractor' },
-        body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.85, max_tokens: 2500 }),
+        body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.85, max_tokens: 4000 }),
       });
       if (res.status === 200) {
         const data = await res.json();
         let answer = cleanOutputText(data.choices?.[0]?.message?.content || '');
-        if ((answer.match(/[\u0600-\u06FF]/g) || []).length < 50) { errors.push(`${model}: غير عربية`); continue; }
+        if ((answer.match(/[\u0600-\u06FF]/g) || []).length < 100) { errors.push(`${model}: غير عربية`); continue; }
         return { text: answer, model };
       }
       const errData = await res.json().catch(() => ({}));
@@ -380,63 +388,48 @@ function wrapArabicText(text, maxWidth, fontSize, fontFamily) {
   return lines;
 }
 
-// ✅ خوارزمية جديدة: توزيع النص على 5-6 أسطر
+// ✅ خوارزمية جديدة مصممة للفقرات الطويلة
 function computeOptimalLayout(text, W, H, config, variant) {
   const len = text.length;
   const topDivider = config.isModern ? 120 : 340;
   const bottomDivider = config.isModern ? H - 320 : H - 400;
-  const availableHeight = bottomDivider - topDivider - 100;
+  const availableHeight = bottomDivider - topDivider - 80;
 
-  // الهدف: 5-6 أسطر (للنصوص القصيرة جدًا، أقل)
-  const maxPossible = Math.max(2, Math.floor(len / 6));
-  const targetLines = Math.min(6, Math.max(3, Math.floor(len / 8)));
-  const finalTarget = Math.min(targetLines, maxPossible);
-
-  // ابدأ من خط كبير + عمود ضيق
-  let fontSize = 130;
-  let maxTextWidth = 460;
+  // النصوص الطويلة تحتاج خط أصغر وأعمدة أعرض
+  // المفتاح: اختر خطًا ينتج 8-14 سطرًا بحد أقصى
+  let fontSize = 60;
+  let maxTextWidth = W - 260;
 
   // ضبط الخط حسب طول النص
-  if (len > 60) fontSize = 115;
-  if (len > 100) fontSize = 100;
-  if (len > 160) fontSize = 88;
-  if (len > 240) fontSize = 76;
-  if (len > 320) fontSize = 66;
+  if (len < 120) { fontSize = 68; maxTextWidth = W - 320; }
+  else if (len < 180) { fontSize = 60; maxTextWidth = W - 280; }
+  else if (len < 260) { fontSize = 54; maxTextWidth = W - 240; }
+  else if (len < 360) { fontSize = 48; maxTextWidth = W - 220; }
+  else if (len < 480) { fontSize = 44; maxTextWidth = W - 200; }
+  else { fontSize = 40; maxTextWidth = W - 180; }
 
-  // ضبط عرض العمود بناءً على الخط
-  const approxCharsPerLine = Math.max(6, Math.ceil(len / finalTarget));
-  maxTextWidth = Math.min(
-    W - 220,
-    Math.max(380, approxCharsPerLine * fontSize * 0.55)
-  );
-
+  let lineHeight = Math.round(fontSize * 1.85);
   let lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
 
-  // قلّل الخط إذا تجاوز الارتفاع المتاح
+  // ضبط تكراري: إذا تجاوز عدد الأسطر الحد، قلل حجم الخط تدريجيًا
   let safety = 0;
-  while (lines.length * Math.round(fontSize * 1.75) > availableHeight && fontSize > 40 && safety < 30) {
-    fontSize -= 4;
-    if (fontSize < 90 && maxTextWidth < W - 220) maxTextWidth += 15;
+  while (lines.length * lineHeight > availableHeight && fontSize > 34 && safety < 40) {
+    fontSize -= 2;
+    lineHeight = Math.round(fontSize * 1.85);
     lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
     safety++;
   }
 
-  // اضبط للوصول إلى الهدف
+  // إذا كان النص قصير جدًا وكان عدد الأسطر أقل من 3، كبّر الخط
   safety = 0;
-  while (lines.length > finalTarget + 1 && fontSize > 40 && safety < 20) {
-    fontSize -= 3;
-    lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
-    safety++;
-  }
-  safety = 0;
-  while (lines.length < finalTarget && fontSize < 140 && safety < 25) {
-    fontSize += 4;
-    if (fontSize > 100 && maxTextWidth > 400) maxTextWidth -= 15;
+  while (lines.length < 3 && fontSize < 90 && safety < 25) {
+    fontSize += 3;
+    lineHeight = Math.round(fontSize * 1.85);
     lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
     safety++;
   }
 
-  return { fontSize, maxTextWidth, lines, topDivider, bottomDivider, availableHeight };
+  return { fontSize, maxTextWidth, lines, lineHeight, topDivider, bottomDivider, availableHeight };
 }
 
 function buildCornerSVG(cx, cy, dirX, dirY, size, color) {
@@ -651,19 +644,18 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
     ? config.variants[forceVariantIdx % totalVariants]
     : config.variants[nextVariant(totalVariants)];
 
-  // ✅ استخدام الخوارزمية الجديدة
   const layout = computeOptimalLayout(text, W, H, config, variant);
   const fontSize = layout.fontSize;
   const lines = layout.lines;
-  const lineHeight = Math.round(fontSize * 1.75);
+  const lineHeight = layout.lineHeight;
   const topDivider = layout.topDivider;
   const bottomDivider = layout.bottomDivider;
 
   const totalH = lines.length * lineHeight;
   const centerY = (topDivider + bottomDivider) / 2;
   let startY = centerY - totalH / 2;
-  if (startY < topDivider + 40) startY = topDivider + 40;
-  if (startY + totalH > bottomDivider - 40) startY = bottomDivider - 40 - totalH;
+  if (startY < topDivider + 30) startY = topDivider + 30;
+  if (startY + totalH > bottomDivider - 30) startY = bottomDivider - 30 - totalH;
 
   const cx = W / 2;
   let svg;
@@ -940,7 +932,7 @@ function initApp() {
     document.getElementById('genBtn').addEventListener('click', generate);
 
     document.getElementById('countBtn').addEventListener('click', function() {
-      const opts = [5, 10, 15, 20];
+      const opts = [3, 5, 7, 10];
       let idx = opts.indexOf(state.quoteCount);
       idx = (idx + 1) % opts.length;
       state.quoteCount = opts[idx];
