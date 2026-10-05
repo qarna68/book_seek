@@ -57,6 +57,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .style-picker { display: flex; gap: 6px; max-width: 100%; flex-wrap: wrap; justify-content: center; }
 .style-chip { padding: 6px 10px; border-radius: 20px; font-size: 11px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-family: inherit; }
 .style-chip.active { background: #b8945a; border-color: #b8945a; font-weight: 700; }
+.style-chip:disabled { opacity: 0.5; cursor: wait; }
 #editPanel { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
 #editTextarea { width: 100%; height: 130px; padding: 12px; border-radius: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; font-size: 15px; font-family: inherit; direction: rtl; line-height: 1.7; resize: vertical; }
 .preview-actions { display: flex; gap: 8px; width: 100%; max-width: 400px; flex-wrap: wrap; justify-content: center; }
@@ -193,6 +194,10 @@ function nextVariant(total) {
   try { localStorage.setItem(VARIANT_STORAGE, String(variantCounter)); } catch (e) {}
   return variantCounter % total;
 }
+
+// ✅ قفل لمنع التوليد المتوازي
+let generateLock = false;
+let generateId = 0;
 
 let state = {
   pdfFile: null, pdfText: '', pdfName: '', authorName: '',
@@ -552,15 +557,13 @@ function buildDiamondPatternSVG(W, H, color, opacity) {
   return s;
 }
 
-// ✅ برواز الخبر: قوسان سميكان وطويلان
+// ✅ برواز الخبر: مسافة أكبر من الحواف
 function buildNewsBracketsSVG(W, H, color, thickness) {
-  const pad = 70;
-  const armLen = 350; // ✅ أطول
+  const pad = 130; // ✅ 130 بدل 70
+  const armLen = 300;
   let s = `<g stroke="${color}" fill="none" stroke-width="${thickness}" stroke-linecap="square">`;
-  // علوي-يسار
   s += `<line x1="${pad}" y1="${pad}" x2="${pad + armLen}" y2="${pad}"/>`;
   s += `<line x1="${pad}" y1="${pad}" x2="${pad}" y2="${pad + armLen}"/>`;
-  // سفلي-يمين
   s += `<line x1="${W - pad}" y1="${H - pad}" x2="${W - pad - armLen}" y2="${H - pad}"/>`;
   s += `<line x1="${W - pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad - armLen}"/>`;
   s += '</g>';
@@ -777,7 +780,7 @@ const STYLE_CONFIGS = {
       { font: FONT_FAMILY_B, textColor: '#f0f4fc', textShadow: 'rgba(0,0,0,0.95)', textHighlight: 'rgba(200,215,250,0.4)' },
     ],
   },
-  // ✅ الخبر: سماكة 28 (ضِعف) وطول 350
+  // ✅ الخبر: pad 130 بدل 70
   news: {
     bgColors: ['#ffffff', '#fcfcfc', '#f5f5f5'],
     vignette: ['rgba(255,255,255,0)', 'rgba(180, 180, 180, 0.12)'],
@@ -816,6 +819,7 @@ const STYLE_CONFIGS = {
   },
 };
 
+// ✅ توليد صورة مع قفل و id لمنع التعارض
 async function generateQuoteImage(rawText, bookName, authorName, style, forceVariantIdx) {
   await ensureFonts();
   const text = prepareQuoteText(rawText);
@@ -891,7 +895,7 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
 
   await new Promise((resolve, reject) => {
     img.onload = resolve;
-    img.onerror = () => reject(new Error('فشل تحميل SVG'));
+    img.onerror = () => { URL.revokeObjectURL(svgUrl); reject(new Error('فشل تحميل SVG')); };
     img.src = svgUrl;
   });
 
@@ -906,7 +910,18 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
   return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
 }
 
+// ✅ دالة مركزية مع قفل لمنع التوليد المتوازي
 async function showQuoteImage(text, style) {
+  // إذا كان هناك توليد جارٍ، تجاهل الطلب الجديد
+  if (generateLock) {
+    return;
+  }
+  generateLock = true;
+  const myId = ++generateId;
+
+  // عطّل chips أثناء التوليد
+  document.querySelectorAll('.style-chip').forEach(c => c.disabled = true);
+
   setStatus('جاري توليد الصورة...');
   try {
     state.currentImageText = text;
@@ -915,6 +930,10 @@ async function showQuoteImage(text, style) {
     state.currentVariantIdx = null;
     const useStyle = style || state.imageStyle;
     const blob = await generateQuoteImage(state.editedText, state.pdfName, state.authorName, useStyle);
+
+    // ✅ إذا كانت هناك محاولة أحدث، تجاهل النتيجة
+    if (myId !== generateId) return;
+
     state.currentImageBlob = blob;
     const url = URL.createObjectURL(blob);
     document.getElementById('previewImg').src = url;
@@ -929,9 +948,13 @@ async function showQuoteImage(text, style) {
     });
     setStatus('تم توليد الصورة ✨', 'ok');
   } catch (e) {
-    setStatus('فشل توليد الصورة', 'err');
-    toast('❌ ' + e.message);
-    showErr('image: ' + e.message);
+    if (myId === generateId) {
+      setStatus('فشل توليد الصورة', 'err');
+      toast('❌ ' + e.message);
+    }
+  } finally {
+    generateLock = false;
+    document.querySelectorAll('.style-chip').forEach(c => c.disabled = false);
   }
 }
 
@@ -993,7 +1016,6 @@ async function regenerateCurrent() {
   } catch (e) {
     setStatus('فشل', 'err');
     toast('❌ ' + e.message);
-    showErr('regen: ' + e.message);
   } finally {
     tQ.disabled = false; tB.disabled = false; tA.disabled = false; rB.disabled = false;
     rB.textContent = '🎨 توليد';
@@ -1184,6 +1206,7 @@ function initApp() {
 
     document.querySelectorAll('.style-chip').forEach(chip => {
       chip.addEventListener('click', async () => {
+        if (generateLock) return;
         state.imageStyle = chip.dataset.style;
         saveStyle(state.imageStyle);
         state.currentVariantIdx = null;
