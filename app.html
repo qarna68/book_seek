@@ -32,6 +32,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .btn-gold { background: #b8945a; }
 .btn-pink { background: #b83280; }
 .btn-teal { background: #2c7a7b; }
+.btn-orange { background: #c05621; }
 .status { text-align: center; font-size: 12px; color: #718096; padding: 8px; min-height: 30px; }
 .status.ok { color: #2f855a; font-weight: 700; }
 .status.err { color: #c53030; font-weight: 700; }
@@ -158,6 +159,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   <div class="preview-actions">
     <button type="button" id="editQuoteBtn" class="btn btn-purple">✏️ تعديل</button>
     <button type="button" id="durationBtn" class="btn btn-teal">⏱️ 10 ث</button>
+    <button type="button" id="animationBtn" class="btn btn-orange">✍️ كلمة</button>
     <button type="button" id="videoBtn" class="btn btn-pink">🎬 فيديو</button>
     <button type="button" id="regenBtn" class="btn btn-green hidden">🎨 توليد</button>
     <button type="button" id="shareImgBtn" class="btn btn-blue">📤 مشاركة</button>
@@ -218,6 +220,7 @@ const AUTHOR_STORAGE = 'quotes_author';
 const STYLE_STORAGE = 'quotes_style';
 const VARIANT_STORAGE = 'quotes_variant_index';
 const DURATION_STORAGE = 'quotes_video_duration';
+const ANIMATION_STORAGE = 'quotes_video_animation';
 
 const STYLE_NAMES = {
   naskh: '📜 نسخي فاخر', oriental: '🌙 شرقي', classic: '🏛️ كلاسيكي', modern: '⚡ حديث',
@@ -226,6 +229,22 @@ const STYLE_NAMES = {
 const STYLE_ORDER = ['naskh', 'oriental', 'classic', 'modern', 'islamic', 'night', 'news', 'emerald'];
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30];
+
+// ✅ أنواع الحركات
+const ANIM_WORD = 'word';   // كلمة بكلمة
+const ANIM_LINE = 'line';   // سطر بسطر
+const ANIM_FADE = 'fade';   // تدريجي
+const ANIMATION_OPTIONS = [ANIM_WORD, ANIM_LINE, ANIM_FADE];
+const ANIMATION_LABELS = {
+  [ANIM_WORD]: '✍️ كلمة',
+  [ANIM_LINE]: '📝 سطر',
+  [ANIM_FADE]: '✨ تدريجي',
+};
+const ANIMATION_NAMES = {
+  [ANIM_WORD]: 'كلمة بكلمة',
+  [ANIM_LINE]: 'سطر بسطر',
+  [ANIM_FADE]: 'تدريجي كامل',
+};
 
 const FONT_FAMILY = "Amiri, 'Noto Naskh Arabic', 'Scheherazade New', Georgia, serif";
 const FONT_FAMILY_B = "'Aref Ruqaa', Amiri, 'Scheherazade New', Georgia, serif";
@@ -254,6 +273,7 @@ let state = {
   currentVideoBlob: null, currentVideoMime: '', currentVideoUrl: '',
   lastFrameDataUrl: '',
   videoDuration: 10,
+  animationType: ANIM_WORD,
 };
 
 let fontsReady = false;
@@ -291,17 +311,25 @@ function loadApiKey() {
     if (s && STYLE_NAMES[s]) { state.imageStyle = s; document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[s].split(' ').slice(1).join(' '); }
     const d = parseInt(localStorage.getItem(DURATION_STORAGE) || '0', 10);
     if (DURATION_OPTIONS.includes(d)) { state.videoDuration = d; }
+    const an = localStorage.getItem(ANIMATION_STORAGE);
+    if (an && ANIMATION_OPTIONS.includes(an)) { state.animationType = an; }
     updateDurationButton();
+    updateAnimationButton();
   } catch (e) {}
 }
 function saveApiKey(k) { try { localStorage.setItem(API_KEY_STORAGE, k); } catch (e) {} }
 function saveAuthor(a) { try { localStorage.setItem(AUTHOR_STORAGE, a); } catch (e) {} }
 function saveStyle(s) { try { localStorage.setItem(STYLE_STORAGE, s); } catch (e) {} }
 function saveDuration(d) { try { localStorage.setItem(DURATION_STORAGE, String(d)); } catch (e) {} }
+function saveAnimation(a) { try { localStorage.setItem(ANIMATION_STORAGE, a); } catch (e) {} }
 
 function updateDurationButton() {
   const btn = document.getElementById('durationBtn');
   if (btn) btn.textContent = '⏱️ ' + state.videoDuration + ' ث';
+}
+function updateAnimationButton() {
+  const btn = document.getElementById('animationBtn');
+  if (btn) btn.textContent = ANIMATION_LABELS[state.animationType] || '✍️ كلمة';
 }
 
 async function extractPdfText(file) {
@@ -622,8 +650,10 @@ function buildNewsBracketsSVG(W, H, color, thickness) {
   return s;
 }
 
+// ✅ buildQuoteSVG مع دعم textOpacity للحركة التدريجية
 function buildQuoteSVG(opts) {
-  const { W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant, showQuote, showBook, showAuthor } = opts;
+  const { W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant, showQuote, showBook, showAuthor, textOpacity } = opts;
+  const op = (typeof textOpacity === 'number') ? textOpacity : 1;
   const NS = 'xmlns="http://www.w3.org/2000/svg"';
   const font = variant.font;
   const textColor = variant.textColor;
@@ -633,6 +663,7 @@ function buildQuoteSVG(opts) {
 
   let s = `<svg ${NS} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
 
+  // الخلفية والإطارات — دائمًا مرئية
   s += `<defs>
     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
       ${config.bgColors.map((c, i) => `<stop offset="${(i / (config.bgColors.length - 1) * 100).toFixed(1)}%" stop-color="${c}"/>`).join('')}
@@ -676,6 +707,12 @@ function buildQuoteSVG(opts) {
     s += buildNewsBracketsSVG(W, H, config.bracketColor || '#1a1a1a', config.bracketThickness || 28);
   }
 
+  // ✅ المحتوى (النص + الكتاب + المؤلف + العلامة المائية) بمعامل شفافية
+  const openG = op < 1 ? `<g opacity="${op.toFixed(3)}">` : '';
+  const closeG = op < 1 ? '</g>' : '';
+
+  s += openG;
+
   if (showQuote) {
     s += `<text x="90" y="230" font-family="Aref Ruqaa, Georgia, serif" font-weight="bold" font-size="220" fill="${config.quoteMarkColor}" text-anchor="start">&#8220;</text>`;
   }
@@ -713,6 +750,7 @@ function buildQuoteSVG(opts) {
     s += `<text transform="translate(${p.x.toFixed(0)} ${p.y.toFixed(0)}) rotate(-22)" font-family="${FONT_FAMILY}" font-weight="700" font-size="34" fill="${config.watermarkColor}" opacity="0.12" text-anchor="middle" direction="rtl">تصميم / sab3-77</text>`;
   }
 
+  s += closeG;
   s += `</svg>`;
   return s;
 }
@@ -969,6 +1007,7 @@ async function showQuoteImage(text, style) {
     document.getElementById('editQuoteBtn').classList.remove('hidden');
     document.getElementById('videoBtn').classList.remove('hidden');
     document.getElementById('durationBtn').classList.remove('hidden');
+    document.getElementById('animationBtn').classList.remove('hidden');
     document.getElementById('regenBtn').classList.add('hidden');
     document.getElementById('imgPreview').classList.remove('hidden');
     document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
@@ -991,6 +1030,7 @@ function enterEditMode() {
   document.getElementById('editQuoteBtn').classList.add('hidden');
   document.getElementById('videoBtn').classList.add('hidden');
   document.getElementById('durationBtn').classList.add('hidden');
+  document.getElementById('animationBtn').classList.add('hidden');
   document.getElementById('regenBtn').classList.remove('hidden');
   updateToggleUI();
 }
@@ -1030,6 +1070,7 @@ async function regenerateCurrent() {
     document.getElementById('editQuoteBtn').classList.remove('hidden');
     document.getElementById('videoBtn').classList.remove('hidden');
     document.getElementById('durationBtn').classList.remove('hidden');
+    document.getElementById('animationBtn').classList.remove('hidden');
     document.getElementById('regenBtn').classList.add('hidden');
     document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
     state.editMode = false;
@@ -1073,6 +1114,7 @@ function canPlayVideoType(mimeType) {
   return result === 'probably' || result === 'maybe';
 }
 
+// ✅ توليد الفيديو مع 3 أنواع حركات
 async function generateQuoteVideo(rawText, style) {
   await ensureFonts();
   const text = prepareQuoteText(rawText);
@@ -1082,38 +1124,70 @@ async function generateQuoteVideo(rawText, style) {
 
   const layout = computeOptimalLayout(text, W, H, config, variant);
   const fontSize = layout.fontSize;
-  const rawLines = layout.lines;
+  const rawLines = layout.lines.filter(l => l.trim()); // أسطر فارغة محذوفة
   const lineHeight = layout.lineHeight;
   const topDivider = layout.topDivider;
   const bottomDivider = layout.bottomDivider;
 
+  const totalLines = rawLines.length;
   const totalH = rawLines.length * lineHeight;
   const centerY = (topDivider + bottomDivider) / 2;
   let startY = centerY - totalH / 2;
   if (startY < topDivider + 30) startY = topDivider + 30;
   if (startY + totalH > bottomDivider - 30) startY = bottomDivider - 30 - totalH;
 
+  // احتفظ بالأسطر الأصلية (بما فيها الفارغة) لضمان تخطيط صحيح
+  const originalLines = layout.lines;
+
+  // جمع كل الكلمات
   const wordSeq = [];
-  rawLines.forEach((line, li) => {
+  originalLines.forEach((line, li) => {
     if (!line.trim()) return;
     line.split(/\s+/).filter(w => w).forEach(w => wordSeq.push({ line: li, word: w }));
   });
   const totalWords = wordSeq.length;
-  const totalLines = rawLines.length;
 
-  function buildPartialLines(upTo) {
-    const lineWords = new Array(totalLines).fill(null).map(() => []);
-    for (let i = 0; i < upTo && i < totalWords; i++) {
+  // ✅ بناء السطور بجزء من الكلمات
+  function buildPartialLines(upToWords) {
+    const lineWords = new Array(originalLines.length).fill(null).map(() => []);
+    for (let i = 0; i < upToWords && i < totalWords; i++) {
       const w = wordSeq[i];
       lineWords[w.line].push(w.word);
     }
     return lineWords.map(arr => arr.join(' '));
   }
 
-  function buildVideoFrameSVG(upToWords) {
+  // ✅ بناء السطور بجزء من الأسطر الكاملة
+  function buildPartialLinesByLine(upToLines) {
+    const result = new Array(originalLines.length).fill('');
+    let visibleCount = 0;
+    for (let i = 0; i < originalLines.length; i++) {
+      if (!originalLines[i].trim()) { result[i] = ''; continue; }
+      if (visibleCount < upToLines) {
+        result[i] = originalLines[i];
+      }
+      visibleCount++;
+    }
+    return result;
+  }
+
+  // ✅ توليد إطار SVG بناءً على نوع الحركة
+  function buildFrameSVG(frameState) {
+    if (frameState.mode === 'fade') {
+      return buildQuoteSVG({
+        W, H, lines: originalLines, fontSize, lineHeight, startY, topDivider, bottomDivider,
+        bookName: state.showBook ? state.pdfName : '',
+        authorName: state.showAuthor ? state.authorName : '',
+        config, variant,
+        showQuote: state.showQuote,
+        showBook: state.showBook,
+        showAuthor: state.showAuthor,
+        textOpacity: frameState.opacity,
+      });
+    }
+    // word/line
     return buildQuoteSVG({
-      W, H, lines: buildPartialLines(upToWords), fontSize, lineHeight,
-      startY, topDivider, bottomDivider,
+      W, H, lines: frameState.lines, fontSize, lineHeight, startY, topDivider, bottomDivider,
       bookName: state.showBook ? state.pdfName : '',
       authorName: state.showAuthor ? state.authorName : '',
       config, variant,
@@ -1123,23 +1197,41 @@ async function generateQuoteVideo(rawText, style) {
     });
   }
 
-  const MAX_FRAMES_TO_PRERENDER = 40;
-  const step = Math.max(1, Math.ceil(totalWords / MAX_FRAMES_TO_PRERENDER));
-  const frameWordCounts = [];
-  for (let i = 0; i <= totalWords; i += step) frameWordCounts.push(i);
-  if (frameWordCounts[frameWordCounts.length - 1] !== totalWords) frameWordCounts.push(totalWords);
+  // ✅ بناء قائمة الحالات بناءً على نوع الحركة
+  const frameStates = [];  // [{mode, ...}]
 
-  const prerenderedImages = [];
-  const revokeUrls = [];
-  for (let i = 0; i < frameWordCounts.length; i++) {
-    updateVideoProgress(0.05 + (i / frameWordCounts.length) * 0.55, `رسم الصور... ${i + 1}/${frameWordCounts.length}`);
-    const { img, url } = await svgToImage(buildVideoFrameSVG(frameWordCounts[i]));
-    revokeUrls.push(url);
-    prerenderedImages.push(img);
-    await new Promise(r => setTimeout(r, 10));
+  if (state.animationType === ANIM_WORD) {
+    const MAX_FRAMES = 40;
+    const step = Math.max(1, Math.ceil(totalWords / MAX_FRAMES));
+    const counts = [];
+    for (let i = 0; i <= totalWords; i += step) counts.push(i);
+    if (counts[counts.length - 1] !== totalWords) counts.push(totalWords);
+    for (const c of counts) frameStates.push({ mode: 'word', wordCount: c, lines: buildPartialLines(c) });
+  } else if (state.animationType === ANIM_LINE) {
+    const lineCount = originalLines.filter(l => l.trim()).length;
+    for (let i = 0; i <= lineCount; i++) {
+      frameStates.push({ mode: 'line', lineCount: i, lines: buildPartialLinesByLine(i) });
+    }
+  } else {
+    // fade: 30 حالة من 0 إلى 1
+    const STEPS = 30;
+    for (let i = 0; i <= STEPS; i++) {
+      frameStates.push({ mode: 'fade', opacity: i / STEPS });
+    }
   }
 
-  // استخراج آخر إطار كصورة ثابتة
+  // توليد الصور
+  const prerenderedImages = [];
+  const revokeUrls = [];
+  for (let i = 0; i < frameStates.length; i++) {
+    updateVideoProgress(0.05 + (i / frameStates.length) * 0.55, `رسم الإطارات... ${i + 1}/${frameStates.length}`);
+    const { img, url } = await svgToImage(buildFrameSVG(frameStates[i]));
+    revokeUrls.push(url);
+    prerenderedImages.push(img);
+    await new Promise(r => setTimeout(r, 8));
+  }
+
+  // آخر إطار كصورة ثابتة
   const lastFrameCanvas = document.createElement('canvas');
   lastFrameCanvas.width = W; lastFrameCanvas.height = H;
   const lfc = lastFrameCanvas.getContext('2d');
@@ -1157,10 +1249,10 @@ async function generateQuoteVideo(rawText, style) {
 
   const FPS = 24;
 
-  // ✅ استخدام المدة المختارة (75% ظهور + 25% ثبات)
-  const TOTAL_MS = state.videoDuration * 1000;
-  const TEXT_DURATION_MS = Math.round(TOTAL_MS * 0.75);
-  const HOLD_MS = TOTAL_MS - TEXT_DURATION_MS;
+  // ✅ الثبات: 5 ثوانٍ للـ 10 ث وأكثر، مع ضمان حركة لا تقل عن 3 ثوانٍ
+  const totalMs = state.videoDuration * 1000;
+  const holdMs = Math.min(5000, totalMs - 3000);
+  const animMs = totalMs - holdMs;
 
   const stream = canvas.captureStream(FPS);
   const mimeType = pickBestMimeType();
@@ -1178,15 +1270,12 @@ async function generateQuoteVideo(rawText, style) {
 
   function drawFrameAt(elapsedMs) {
     let frameIdx;
-    if (elapsedMs < TEXT_DURATION_MS) {
-      const progress = elapsedMs / TEXT_DURATION_MS;
-      const targetWord = Math.floor(progress * totalWords);
-      let bestIdx = 0;
-      for (let i = 0; i < frameWordCounts.length; i++) {
-        if (frameWordCounts[i] <= targetWord) bestIdx = i;
-        else break;
-      }
-      frameIdx = bestIdx;
+    if (elapsedMs < animMs) {
+      const progress = elapsedMs / animMs;
+      frameIdx = Math.min(
+        prerenderedImages.length - 1,
+        Math.floor(progress * prerenderedImages.length)
+      );
     } else {
       frameIdx = prerenderedImages.length - 1;
     }
@@ -1202,10 +1291,10 @@ async function generateQuoteVideo(rawText, style) {
       let lastFrame = -1;
       function tick() {
         const elapsed = performance.now() - startTime;
-        if (elapsed >= TOTAL_MS) { try { recorder.stop(); } catch (e) { reject(e); } return; }
+        if (elapsed >= totalMs) { try { recorder.stop(); } catch (e) { reject(e); } return; }
         const currentFrame = Math.floor((elapsed / 1000) * FPS);
         if (currentFrame !== lastFrame) { lastFrame = currentFrame; drawFrameAt(elapsed); }
-        updateVideoProgress(0.6 + (elapsed / TOTAL_MS) * 0.4, `التسجيل... ${((elapsed/TOTAL_MS)*100).toFixed(0)}%`);
+        updateVideoProgress(0.6 + (elapsed / totalMs) * 0.4, `التسجيل... ${((elapsed/totalMs)*100).toFixed(0)}%`);
         requestAnimationFrame(tick);
       }
       recorder.onstop = () => {
@@ -1256,10 +1345,17 @@ async function handleVideoGeneration() {
     return;
   }
 
-  // ✅ عرض المدة في شاشة التوليد
+  const totalMs = state.videoDuration * 1000;
+  const holdMs = Math.min(5000, totalMs - 3000);
+  const animMs = totalMs - holdMs;
+
   const infoEl = document.getElementById('videoDurationInfo');
   if (infoEl) {
-    infoEl.textContent = '⏱️ المدة: ' + state.videoDuration + ' ثوانٍ';
+    infoEl.innerHTML =
+      '⏱️ المدة: ' + state.videoDuration + ' ث ' +
+      '(<b>' + (animMs/1000).toFixed(1) + ' ث حركة</b> + ' +
+      (holdMs/1000).toFixed(1) + ' ث ثبات)<br>' +
+      '🎬 الحركة: ' + ANIMATION_NAMES[state.animationType];
   }
 
   document.getElementById('videoOverlay').classList.remove('hidden');
@@ -1287,11 +1383,11 @@ async function handleVideoGeneration() {
       videoEl.src = state.currentVideoUrl;
       videoEl.style.display = 'block';
       fallbackImg.style.display = 'none';
-      formatBadge.textContent = '✅ ' + (isMp4 ? 'MP4' : 'WebM') + ' — ' + state.videoDuration + ' ث';
+      formatBadge.textContent = '✅ ' + (isMp4 ? 'MP4' : 'WebM') + ' — ' + state.videoDuration + ' ث (' + ANIMATION_NAMES[state.animationType] + ')';
       formatBadge.className = 'format-badge ok';
       hint.innerHTML = isMp4
         ? '💡 <b>لحفظ الفيديو في تطبيق الصور:</b><br>اضغط "📤 مشاركة" ثم اختر <b>"حفظ الفيديو"</b> من قائمة iOS.'
-        : '💡 <b>للمشاركة:</b> اضغط "📤 مشاركة" لإرساله على WhatsApp/Telegram.<br>⚠️ لحفظه في الصور، استخدم CapCut لتحويله إلى MP4.';
+        : '💡 <b>للمشاركة:</b> اضغط "📤 مشاركة" لإرساله على WhatsApp/Telegram.<br>⚠️ لحفظه في الصور، استخدم CapCut.';
     } else {
       videoEl.style.display = 'none';
       fallbackImg.src = state.lastFrameDataUrl;
@@ -1531,7 +1627,6 @@ function initApp() {
     document.getElementById('regenBtn').addEventListener('click', regenerateCurrent);
     document.getElementById('videoBtn').addEventListener('click', handleVideoGeneration);
 
-    // ✅ زر المدة — يتنقل بين الخيارات
     document.getElementById('durationBtn').addEventListener('click', function() {
       let idx = DURATION_OPTIONS.indexOf(state.videoDuration);
       idx = (idx + 1) % DURATION_OPTIONS.length;
@@ -1539,6 +1634,16 @@ function initApp() {
       saveDuration(state.videoDuration);
       updateDurationButton();
       toast('⏱️ المدة: ' + state.videoDuration + ' ثوانٍ', 1200);
+    });
+
+    // ✅ زر الحركة
+    document.getElementById('animationBtn').addEventListener('click', function() {
+      let idx = ANIMATION_OPTIONS.indexOf(state.animationType);
+      idx = (idx + 1) % ANIMATION_OPTIONS.length;
+      state.animationType = ANIMATION_OPTIONS[idx];
+      saveAnimation(state.animationType);
+      updateAnimationButton();
+      toast('🎬 الحركة: ' + ANIMATION_NAMES[state.animationType], 1400);
     });
 
     document.getElementById('toggleQuoteBtn').addEventListener('click', async () => {
@@ -1562,6 +1667,7 @@ function initApp() {
 
     updateToggleUI();
     updateDurationButton();
+    updateAnimationButton();
   } catch (e) {
     showErr('init: ' + e.message);
   }
