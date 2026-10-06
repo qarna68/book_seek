@@ -31,6 +31,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .btn-gray { background: #718096; }
 .btn-gold { background: #b8945a; }
 .btn-pink { background: #b83280; }
+.btn-teal { background: #2c7a7b; }
 .status { text-align: center; font-size: 12px; color: #718096; padding: 8px; min-height: 30px; }
 .status.ok { color: #2f855a; font-weight: 700; }
 .status.err { color: #c53030; font-weight: 700; }
@@ -61,7 +62,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .style-chip:disabled { opacity: 0.5; cursor: wait; }
 #editPanel { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
 #editTextarea { width: 100%; height: 110px; padding: 12px; border-radius: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; font-size: 15px; font-family: inherit; direction: rtl; line-height: 1.7; resize: vertical; }
-.preview-actions { display: flex; gap: 8px; width: 100%; max-width: 400px; flex-wrap: wrap; justify-content: center; }
+.preview-actions { display: flex; gap: 8px; width: 100%; max-width: 420px; flex-wrap: wrap; justify-content: center; }
 .preview-actions .btn { padding: 10px; font-size: 13px; flex: 1; min-width: 90px; }
 .toggle-row { display: flex; gap: 8px; width: 100%; flex-wrap: wrap; }
 
@@ -96,6 +97,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .format-badge { display: inline-block; padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; margin-bottom: 10px; }
 .format-badge.ok { background: rgba(47,133,90,0.2); color: #68d391; }
 .format-badge.warn { background: rgba(214,158,46,0.2); color: #f6e05e; }
+.duration-info { font-size: 12px; opacity: 0.75; margin-bottom: 12px; color: #cbd5e0; }
 </style>
 </head>
 <body>
@@ -155,6 +157,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
   </div>
   <div class="preview-actions">
     <button type="button" id="editQuoteBtn" class="btn btn-purple">✏️ تعديل</button>
+    <button type="button" id="durationBtn" class="btn btn-teal">⏱️ 10 ث</button>
     <button type="button" id="videoBtn" class="btn btn-pink">🎬 فيديو</button>
     <button type="button" id="regenBtn" class="btn btn-green hidden">🎨 توليد</button>
     <button type="button" id="shareImgBtn" class="btn btn-blue">📤 مشاركة</button>
@@ -165,7 +168,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 <div id="videoOverlay" class="video-overlay hidden">
   <div class="video-box">
     <h3>🎬 جاري توليد الفيديو...</h3>
-    <p>يستغرق التوليد 20-40 ثانية حسب طول النص. لا تغلق الصفحة.</p>
+    <p id="videoDurationInfo" class="duration-info"></p>
     <div class="video-percent" id="videoPercent">0%</div>
     <div class="video-progress"><div class="video-progress-bar" id="videoProgressBar"></div></div>
     <div class="video-status" id="videoStatus">بدء...</div>
@@ -214,12 +217,15 @@ const API_KEY_STORAGE = 'quotes_api_key';
 const AUTHOR_STORAGE = 'quotes_author';
 const STYLE_STORAGE = 'quotes_style';
 const VARIANT_STORAGE = 'quotes_variant_index';
+const DURATION_STORAGE = 'quotes_video_duration';
 
 const STYLE_NAMES = {
   naskh: '📜 نسخي فاخر', oriental: '🌙 شرقي', classic: '🏛️ كلاسيكي', modern: '⚡ حديث',
   islamic: '🕌 إسلامي مزخرف', night: '🌌 ليلي بنجوم', news: '📰 خبر عاجل', emerald: '💡 نصيحة زمردي',
 };
 const STYLE_ORDER = ['naskh', 'oriental', 'classic', 'modern', 'islamic', 'night', 'news', 'emerald'];
+
+const DURATION_OPTIONS = [5, 10, 15, 20, 30];
 
 const FONT_FAMILY = "Amiri, 'Noto Naskh Arabic', 'Scheherazade New', Georgia, serif";
 const FONT_FAMILY_B = "'Aref Ruqaa', Amiri, 'Scheherazade New', Georgia, serif";
@@ -247,6 +253,7 @@ let state = {
   currentVariantIdx: null,
   currentVideoBlob: null, currentVideoMime: '', currentVideoUrl: '',
   lastFrameDataUrl: '',
+  videoDuration: 10,
 };
 
 let fontsReady = false;
@@ -282,11 +289,20 @@ function loadApiKey() {
     const a = localStorage.getItem(AUTHOR_STORAGE); if (a) { document.getElementById('authorName').value = a; state.authorName = a; }
     const s = localStorage.getItem(STYLE_STORAGE);
     if (s && STYLE_NAMES[s]) { state.imageStyle = s; document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[s].split(' ').slice(1).join(' '); }
+    const d = parseInt(localStorage.getItem(DURATION_STORAGE) || '0', 10);
+    if (DURATION_OPTIONS.includes(d)) { state.videoDuration = d; }
+    updateDurationButton();
   } catch (e) {}
 }
 function saveApiKey(k) { try { localStorage.setItem(API_KEY_STORAGE, k); } catch (e) {} }
 function saveAuthor(a) { try { localStorage.setItem(AUTHOR_STORAGE, a); } catch (e) {} }
 function saveStyle(s) { try { localStorage.setItem(STYLE_STORAGE, s); } catch (e) {} }
+function saveDuration(d) { try { localStorage.setItem(DURATION_STORAGE, String(d)); } catch (e) {} }
+
+function updateDurationButton() {
+  const btn = document.getElementById('durationBtn');
+  if (btn) btn.textContent = '⏱️ ' + state.videoDuration + ' ث';
+}
 
 async function extractPdfText(file) {
   if (!pdfjsReady) throw new Error('pdf.js لم يُحمّل');
@@ -952,6 +968,7 @@ async function showQuoteImage(text, style) {
     document.getElementById('editPanel').classList.add('hidden');
     document.getElementById('editQuoteBtn').classList.remove('hidden');
     document.getElementById('videoBtn').classList.remove('hidden');
+    document.getElementById('durationBtn').classList.remove('hidden');
     document.getElementById('regenBtn').classList.add('hidden');
     document.getElementById('imgPreview').classList.remove('hidden');
     document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
@@ -973,6 +990,7 @@ function enterEditMode() {
   document.getElementById('editPanel').classList.remove('hidden');
   document.getElementById('editQuoteBtn').classList.add('hidden');
   document.getElementById('videoBtn').classList.add('hidden');
+  document.getElementById('durationBtn').classList.add('hidden');
   document.getElementById('regenBtn').classList.remove('hidden');
   updateToggleUI();
 }
@@ -1011,6 +1029,7 @@ async function regenerateCurrent() {
     document.getElementById('editPanel').classList.add('hidden');
     document.getElementById('editQuoteBtn').classList.remove('hidden');
     document.getElementById('videoBtn').classList.remove('hidden');
+    document.getElementById('durationBtn').classList.remove('hidden');
     document.getElementById('regenBtn').classList.add('hidden');
     document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
     state.editMode = false;
@@ -1030,17 +1049,14 @@ function updateVideoProgress(percent, statusText) {
   if (statusText) document.getElementById('videoStatus').textContent = statusText;
 }
 
-// ✅ محاولة أقوى لإنتاج MP4
 function pickBestMimeType() {
   const candidates = [
-    // MP4 H.264 - أفضل خيار للصور (iOS 17.4+)
     'video/mp4;codecs=avc1.64001E',
     'video/mp4;codecs=avc1.4D401E',
     'video/mp4;codecs=avc1.42E01E',
     'video/mp4;codecs=h264',
     'video/mp4;codecs=avc1',
     'video/mp4',
-    // WebM احتياطي
     'video/webm;codecs=vp9',
     'video/webm;codecs=vp8',
     'video/webm',
@@ -1123,7 +1139,7 @@ async function generateQuoteVideo(rawText, style) {
     await new Promise(r => setTimeout(r, 10));
   }
 
-  // ✅ استخراج آخر إطار كصورة ثابتة (fallback)
+  // استخراج آخر إطار كصورة ثابتة
   const lastFrameCanvas = document.createElement('canvas');
   lastFrameCanvas.width = W; lastFrameCanvas.height = H;
   const lfc = lastFrameCanvas.getContext('2d');
@@ -1132,7 +1148,6 @@ async function generateQuoteVideo(rawText, style) {
   lfc.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
   state.lastFrameDataUrl = lastFrameCanvas.toDataURL('image/png');
 
-  // تحضير Canvas للتسجيل
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -1141,9 +1156,11 @@ async function generateQuoteVideo(rawText, style) {
   ctx.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
 
   const FPS = 24;
-  const TEXT_DURATION_MS = 7500;
-  const HOLD_MS = 2500;
-  const TOTAL_MS = TEXT_DURATION_MS + HOLD_MS;
+
+  // ✅ استخدام المدة المختارة (75% ظهور + 25% ثبات)
+  const TOTAL_MS = state.videoDuration * 1000;
+  const TEXT_DURATION_MS = Math.round(TOTAL_MS * 0.75);
+  const HOLD_MS = TOTAL_MS - TEXT_DURATION_MS;
 
   const stream = canvas.captureStream(FPS);
   const mimeType = pickBestMimeType();
@@ -1239,6 +1256,12 @@ async function handleVideoGeneration() {
     return;
   }
 
+  // ✅ عرض المدة في شاشة التوليد
+  const infoEl = document.getElementById('videoDurationInfo');
+  if (infoEl) {
+    infoEl.textContent = '⏱️ المدة: ' + state.videoDuration + ' ثوانٍ';
+  }
+
   document.getElementById('videoOverlay').classList.remove('hidden');
   updateVideoProgress(0, 'جاري التحضير...');
 
@@ -1252,7 +1275,6 @@ async function handleVideoGeneration() {
     if (state.currentVideoUrl) URL.revokeObjectURL(state.currentVideoUrl);
     state.currentVideoUrl = URL.createObjectURL(blob);
 
-    // ✅ تحديد ما إذا كان الفيديو قابلاً للمعاينة
     const playable = canPlayVideoType(mimeType);
     const isMp4 = mimeType.includes('mp4');
 
@@ -1265,21 +1287,20 @@ async function handleVideoGeneration() {
       videoEl.src = state.currentVideoUrl;
       videoEl.style.display = 'block';
       fallbackImg.style.display = 'none';
-      formatBadge.textContent = '✅ ' + (isMp4 ? 'MP4 — قابل للمعاينة والحفظ في الصور' : 'WebM — قابل للمعاينة');
+      formatBadge.textContent = '✅ ' + (isMp4 ? 'MP4' : 'WebM') + ' — ' + state.videoDuration + ' ث';
       formatBadge.className = 'format-badge ok';
       hint.innerHTML = isMp4
         ? '💡 <b>لحفظ الفيديو في تطبيق الصور:</b><br>اضغط "📤 مشاركة" ثم اختر <b>"حفظ الفيديو"</b> من قائمة iOS.'
         : '💡 <b>للمشاركة:</b> اضغط "📤 مشاركة" لإرساله على WhatsApp/Telegram.<br>⚠️ لحفظه في الصور، استخدم CapCut لتحويله إلى MP4.';
     } else {
-      // ✅ عرض صورة ثابتة بدل الفيديو
       videoEl.style.display = 'none';
       fallbackImg.src = state.lastFrameDataUrl;
       fallbackImg.style.display = 'block';
-      formatBadge.textContent = '⚠️ صيغة ' + (isMp4 ? 'MP4' : 'WebM') + ' — المعاينة غير مدعومة في Safari';
+      formatBadge.textContent = '⚠️ ' + (isMp4 ? 'MP4' : 'WebM') + ' — ' + state.videoDuration + ' ث';
       formatBadge.className = 'format-badge warn';
       hint.innerHTML = '💡 <b>الفيديو جاهز لكن Safari لا يمكنه معاينته.</b><br>' +
         '• للمشاركة المباشرة: اضغط "📤 مشاركة".<br>' +
-        '• للحفظ في الصور: اضغط "💾 حفظ في الملفات" ثم افتحه في <b>CapCut</b> أو <b>InShot</b> وحوّله MP4.';
+        '• للحفظ في الصور: اضغط "💾 حفظ في الملفات" ثم افتحه في <b>CapCut</b>.';
     }
 
     document.getElementById('videoPreview').classList.remove('hidden');
@@ -1510,6 +1531,16 @@ function initApp() {
     document.getElementById('regenBtn').addEventListener('click', regenerateCurrent);
     document.getElementById('videoBtn').addEventListener('click', handleVideoGeneration);
 
+    // ✅ زر المدة — يتنقل بين الخيارات
+    document.getElementById('durationBtn').addEventListener('click', function() {
+      let idx = DURATION_OPTIONS.indexOf(state.videoDuration);
+      idx = (idx + 1) % DURATION_OPTIONS.length;
+      state.videoDuration = DURATION_OPTIONS[idx];
+      saveDuration(state.videoDuration);
+      updateDurationButton();
+      toast('⏱️ المدة: ' + state.videoDuration + ' ثوانٍ', 1200);
+    });
+
     document.getElementById('toggleQuoteBtn').addEventListener('click', async () => {
       state.showQuote = !state.showQuote;
       updateToggleUI();
@@ -1530,6 +1561,7 @@ function initApp() {
     });
 
     updateToggleUI();
+    updateDurationButton();
   } catch (e) {
     showErr('init: ' + e.message);
   }
