@@ -230,9 +230,10 @@ const STYLE_ORDER = ['naskh', 'oriental', 'classic', 'modern', 'islamic', 'night
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30];
 
-const ANIM_WORD = 'word';
-const ANIM_LINE = 'line';
-const ANIM_FADE = 'fade';
+// ✅ أنواع الحركات
+const ANIM_WORD = 'word';   // كلمة بكلمة
+const ANIM_LINE = 'line';   // سطر بسطر
+const ANIM_FADE = 'fade';   // تدريجي
 const ANIMATION_OPTIONS = [ANIM_WORD, ANIM_LINE, ANIM_FADE];
 const ANIMATION_LABELS = {
   [ANIM_WORD]: '✍️ كلمة',
@@ -331,65 +332,25 @@ function updateAnimationButton() {
   if (btn) btn.textContent = ANIMATION_LABELS[state.animationType] || '✍️ كلمة';
 }
 
-// ✅ استخراج نص PDF — نسخة مبسطة تعمل مع جميع الملفات
 async function extractPdfText(file) {
   if (!pdfjsReady) throw new Error('pdf.js لم يُحمّل');
-  
-  setStatus('جاري فتح PDF...');
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   const totalPages = pdf.numPages;
-  if (totalPages === 0) throw new Error('PDF فارغ');
-
-  const TARGET = 30;
+  const MAX = 30;
   let start = 1;
-  if (totalPages > TARGET) {
-    start = Math.floor(Math.random() * (totalPages - TARGET)) + 1;
+  if (totalPages > MAX) start = Math.floor(Math.random() * (totalPages - MAX)) + 1;
+  const end = Math.min(start + MAX - 1, totalPages);
+  let text = '';
+  for (let i = start; i <= end; i++) {
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    const pageText = content.items.map(item => item.str).join(' ');
+    text += `[صفحة ${i}]\n${pageText.trim()}\n\n`;
+    showProgress(true, Math.round(((i - start + 1) / (end - start + 1)) * 100));
   }
-
-  // ترتيب الصفحات: نبدأ من صفحة عشوائية، ثم نعود للبداية
-  const order = [];
-  for (let i = start; i <= totalPages; i++) order.push(i);
-  for (let i = 1; i < start; i++) order.push(i);
-
-  const collected = [];
-  let scannedPages = 0;
-
-  for (let i = 0; i < order.length; i++) {
-    if (collected.length >= TARGET) break;
-    const p = order[i];
-    scannedPages++;
-    try {
-      const page = await pdf.getPage(p);
-      const c = await page.getTextContent();
-      const raw = c.items.map(x => x.str || '').join(' ');
-      const t = raw.replace(/\s+/g, ' ').trim();
-      // ✅ معيار أوسع: أي نص غير فارغ
-      if (t.length > 3) {
-        collected.push({ page: p, text: t });
-      }
-    } catch (e) {}
-    showProgress(true, 5 + (collected.length / TARGET) * 90);
-  }
-
-  if (collected.length === 0) {
-    showProgress(false);
-    throw new Error(
-      'هذا الـ PDF لا يحتوي على نص قابل للاستخراج.\n\n'
-      + 'عدد الصفحات: ' + totalPages + '\n'
-      + 'الصفحات المفحوصة: ' + scannedPages + '\n\n'
-      + 'السبب المحتمل:\n'
-      + '• الملف صور ممسوحة ضوئيًا (Scanned PDF)\n'
-      + '• الملف محمي بكلمة مرور\n'
-      + '• الملف لا يحتوي على نص حقيقي'
-    );
-  }
-  
-  collected.sort((a, b) => a.page - b.page);
-  const text = collected.map(x => '[صفحة ' + x.page + ']\n' + x.text).join('\n\n');
-  
   showProgress(false);
-  return { text, totalPages, collectedPages: collected.length, scannedPages };
+  return { text, totalPages };
 }
 
 function cleanPdfText(text) {
@@ -689,6 +650,7 @@ function buildNewsBracketsSVG(W, H, color, thickness) {
   return s;
 }
 
+// ✅ buildQuoteSVG مع دعم textOpacity للحركة التدريجية
 function buildQuoteSVG(opts) {
   const { W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant, showQuote, showBook, showAuthor, textOpacity } = opts;
   const op = (typeof textOpacity === 'number') ? textOpacity : 1;
@@ -701,6 +663,7 @@ function buildQuoteSVG(opts) {
 
   let s = `<svg ${NS} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
 
+  // الخلفية والإطارات — دائمًا مرئية
   s += `<defs>
     <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
       ${config.bgColors.map((c, i) => `<stop offset="${(i / (config.bgColors.length - 1) * 100).toFixed(1)}%" stop-color="${c}"/>`).join('')}
@@ -744,6 +707,7 @@ function buildQuoteSVG(opts) {
     s += buildNewsBracketsSVG(W, H, config.bracketColor || '#1a1a1a', config.bracketThickness || 28);
   }
 
+  // ✅ المحتوى (النص + الكتاب + المؤلف + العلامة المائية) بمعامل شفافية
   const openG = op < 1 ? `<g opacity="${op.toFixed(3)}">` : '';
   const closeG = op < 1 ? '</g>' : '';
 
@@ -1119,6 +1083,7 @@ async function regenerateCurrent() {
   }
 }
 
+// ============== 🎬 توليد الفيديو ==============
 function updateVideoProgress(percent, statusText) {
   document.getElementById('videoProgressBar').style.width = (percent * 100).toFixed(1) + '%';
   document.getElementById('videoPercent').textContent = Math.round(percent * 100) + '%';
@@ -1149,6 +1114,7 @@ function canPlayVideoType(mimeType) {
   return result === 'probably' || result === 'maybe';
 }
 
+// ✅ توليد الفيديو مع 3 أنواع حركات
 async function generateQuoteVideo(rawText, style) {
   await ensureFonts();
   const text = prepareQuoteText(rawText);
@@ -1158,17 +1124,22 @@ async function generateQuoteVideo(rawText, style) {
 
   const layout = computeOptimalLayout(text, W, H, config, variant);
   const fontSize = layout.fontSize;
-  const originalLines = layout.lines;
+  const rawLines = layout.lines.filter(l => l.trim()); // أسطر فارغة محذوفة
   const lineHeight = layout.lineHeight;
   const topDivider = layout.topDivider;
   const bottomDivider = layout.bottomDivider;
 
-  const totalH = originalLines.length * lineHeight;
+  const totalLines = rawLines.length;
+  const totalH = rawLines.length * lineHeight;
   const centerY = (topDivider + bottomDivider) / 2;
   let startY = centerY - totalH / 2;
   if (startY < topDivider + 30) startY = topDivider + 30;
   if (startY + totalH > bottomDivider - 30) startY = bottomDivider - 30 - totalH;
 
+  // احتفظ بالأسطر الأصلية (بما فيها الفارغة) لضمان تخطيط صحيح
+  const originalLines = layout.lines;
+
+  // جمع كل الكلمات
   const wordSeq = [];
   originalLines.forEach((line, li) => {
     if (!line.trim()) return;
@@ -1176,6 +1147,7 @@ async function generateQuoteVideo(rawText, style) {
   });
   const totalWords = wordSeq.length;
 
+  // ✅ بناء السطور بجزء من الكلمات
   function buildPartialLines(upToWords) {
     const lineWords = new Array(originalLines.length).fill(null).map(() => []);
     for (let i = 0; i < upToWords && i < totalWords; i++) {
@@ -1185,6 +1157,7 @@ async function generateQuoteVideo(rawText, style) {
     return lineWords.map(arr => arr.join(' '));
   }
 
+  // ✅ بناء السطور بجزء من الأسطر الكاملة
   function buildPartialLinesByLine(upToLines) {
     const result = new Array(originalLines.length).fill('');
     let visibleCount = 0;
@@ -1198,6 +1171,7 @@ async function generateQuoteVideo(rawText, style) {
     return result;
   }
 
+  // ✅ توليد إطار SVG بناءً على نوع الحركة
   function buildFrameSVG(frameState) {
     if (frameState.mode === 'fade') {
       return buildQuoteSVG({
@@ -1211,6 +1185,7 @@ async function generateQuoteVideo(rawText, style) {
         textOpacity: frameState.opacity,
       });
     }
+    // word/line
     return buildQuoteSVG({
       W, H, lines: frameState.lines, fontSize, lineHeight, startY, topDivider, bottomDivider,
       bookName: state.showBook ? state.pdfName : '',
@@ -1222,7 +1197,8 @@ async function generateQuoteVideo(rawText, style) {
     });
   }
 
-  const frameStates = [];
+  // ✅ بناء قائمة الحالات بناءً على نوع الحركة
+  const frameStates = [];  // [{mode, ...}]
 
   if (state.animationType === ANIM_WORD) {
     const MAX_FRAMES = 40;
@@ -1237,12 +1213,14 @@ async function generateQuoteVideo(rawText, style) {
       frameStates.push({ mode: 'line', lineCount: i, lines: buildPartialLinesByLine(i) });
     }
   } else {
+    // fade: 30 حالة من 0 إلى 1
     const STEPS = 30;
     for (let i = 0; i <= STEPS; i++) {
       frameStates.push({ mode: 'fade', opacity: i / STEPS });
     }
   }
 
+  // توليد الصور
   const prerenderedImages = [];
   const revokeUrls = [];
   for (let i = 0; i < frameStates.length; i++) {
@@ -1253,6 +1231,7 @@ async function generateQuoteVideo(rawText, style) {
     await new Promise(r => setTimeout(r, 8));
   }
 
+  // آخر إطار كصورة ثابتة
   const lastFrameCanvas = document.createElement('canvas');
   lastFrameCanvas.width = W; lastFrameCanvas.height = H;
   const lfc = lastFrameCanvas.getContext('2d');
@@ -1269,6 +1248,8 @@ async function generateQuoteVideo(rawText, style) {
   ctx.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
 
   const FPS = 24;
+
+  // ✅ الثبات: 5 ثوانٍ للـ 10 ث وأكثر، مع ضمان حركة لا تقل عن 3 ثوانٍ
   const totalMs = state.videoDuration * 1000;
   const holdMs = Math.min(5000, totalMs - 3000);
   const animMs = totalMs - holdMs;
@@ -1291,7 +1272,10 @@ async function generateQuoteVideo(rawText, style) {
     let frameIdx;
     if (elapsedMs < animMs) {
       const progress = elapsedMs / animMs;
-      frameIdx = Math.min(prerenderedImages.length - 1, Math.floor(progress * prerenderedImages.length));
+      frameIdx = Math.min(
+        prerenderedImages.length - 1,
+        Math.floor(progress * prerenderedImages.length)
+      );
     } else {
       frameIdx = prerenderedImages.length - 1;
     }
@@ -1566,15 +1550,9 @@ async function generate() {
   genBtn.disabled = true; genBtn.textContent = '⏳ جاري الاستخراج...';
   try {
     setStatus('جاري قراءة PDF...'); showProgress(true, 0);
-    const result = await extractPdfText(state.pdfFile);
-    const text = result.text;
-    setStatus(`✓ تم جمع ${result.collectedPages} صفحة — جاري التنظيف...`);
+    const { text } = await extractPdfText(state.pdfFile);
     let cleaned = truncateAtLine(cleanPdfText(text), 12000);
-    if (!cleaned.trim()) {
-      setStatus('النص فارغ بعد التنظيف', 'err');
-      document.getElementById('quotes').innerHTML = '<div class="card" style="color:#c53030;text-align:center;padding:20px;line-height:1.8;">تم استخراج نص، لكنه لا يحتوي محتوى عربيًا صالحًا.<br><br>قد يكون الملف مكتوبًا بلغة أخرى، أو محميًا.</div>';
-      return;
-    }
+    if (!cleaned.trim()) { setStatus('لم يُعثر على نص', 'err'); return; }
     setStatus('جاري الاتصال بالنموذج...');
     const { text: answer, model } = await callOpenRouter(apiKey, state.pdfName, cleaned, state.quoteCount);
     const quotes = parseQuotes(answer);
@@ -1586,7 +1564,7 @@ async function generate() {
     genBtn.textContent = '🔄 اقتباسات جديدة';
   } catch (e) {
     setStatus('حدث خطأ', 'err');
-    document.getElementById('quotes').innerHTML = '<div class="card" style="color:#c53030;text-align:right;padding:20px;line-height:1.9;white-space:pre-wrap;">' + escapeHtml(e.message) + '</div>';
+    document.getElementById('quotes').innerHTML = '<div class="card" style="color:#c53030;text-align:center;padding:20px;">حدث خطأ:<br><br>' + escapeHtml(e.message) + '</div>';
   } finally {
     state.busy = false; genBtn.disabled = false; showProgress(false);
   }
@@ -1658,6 +1636,7 @@ function initApp() {
       toast('⏱️ المدة: ' + state.videoDuration + ' ثوانٍ', 1200);
     });
 
+    // ✅ زر الحركة
     document.getElementById('animationBtn').addEventListener('click', function() {
       let idx = ANIMATION_OPTIONS.indexOf(state.animationType);
       idx = (idx + 1) % ANIMATION_OPTIONS.length;
