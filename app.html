@@ -133,6 +133,7 @@ h1{font-size:18px;text-align:center;margin-bottom:16px;font-weight:700}
     <button type="button" class="style-chip" data-style="ocean">🌊 محيط</button>
     <button type="button" class="style-chip" data-style="royal">👑 ملكي</button>
     <button type="button" class="style-chip" data-style="sand">🏜️ رملي</button>
+    <button type="button" class="style-chip" data-style="lightgold">🪙 ذهبي فاتح</button>
   </div>
 
   <div class="orientation-row">
@@ -209,9 +210,10 @@ const ORIENTATION_STORAGE='quotes_orientation';
 const STYLE_NAMES={
   naskh:'📜 نسخي فاخر',oriental:'🌙 شرقي',classic:'🏛️ كلاسيكي',modern:'⚡ حديث',
   islamic:'🕌 إسلامي مزخرف',night:'🌌 ليلي بنجوم',news:'📰 خبر عاجل',emerald:'💡 نصيحة زمردي',
-  sunset:'🌅 غروب ذهبي',ocean:'🌊 محيط عميق',royal:'👑 ملكي فاخر',sand:'🏜️ رملي دافئ'
+  sunset:'🌅 غروب ذهبي',ocean:'🌊 محيط عميق',royal:'👑 ملكي فاخر',sand:'🏜️ رملي دافئ',
+  lightgold:'🪙 ذهبي فاتح'
 };
-const STYLE_ORDER=['naskh','oriental','classic','modern','islamic','night','news','emerald','sunset','ocean','royal','sand'];
+const STYLE_ORDER=['naskh','oriental','classic','modern','islamic','night','news','emerald','sunset','ocean','royal','sand','lightgold'];
 
 const DURATION_OPTIONS=[5,10,15,20,30];
 const ANIM_WORD='word',ANIM_LINE='line',ANIM_FADE='fade';
@@ -496,11 +498,11 @@ function computeOptimalLayout(text,W,H,config,variant){
   const availableHeight=bottomDivider-topDivider-(isPortrait?80:40);
   let fontSize;
   if(isPortrait){
-    if(len<120)fontSize=70;else if(len<180)fontSize=62;else if(len<260)fontSize=56;
-    else if(len<360)fontSize=50;else if(len<480)fontSize=44;else fontSize=40;
+    if(len<120)fontSize=84;else if(len<180)fontSize=76;else if(len<260)fontSize=68;
+    else if(len<360)fontSize=60;else if(len<480)fontSize=52;else fontSize=46;
   }else{
-    if(len<120)fontSize=58;else if(len<180)fontSize=52;else if(len<260)fontSize=46;
-    else if(len<360)fontSize=42;else if(len<480)fontSize=38;else fontSize=34;
+    if(len<120)fontSize=72;else if(len<180)fontSize=64;else if(len<260)fontSize=58;
+    else if(len<360)fontSize=52;else if(len<480)fontSize=46;else fontSize=42;
   }
   const lhRatio=isPortrait?1.85:1.75;
   let maxTextWidth=ABSOLUTE_MAX_WIDTH;
@@ -523,7 +525,7 @@ function computeOptimalLayout(text,W,H,config,variant){
   }
   safety=0;
   const minLinesForGrow=isPortrait?4:3;
-  const maxFontSize=isPortrait?90:70;
+  const maxFontSize=isPortrait?115:90;
   while(lines.length<minLinesForGrow&&fontSize<maxFontSize&&safety<20){
     const nextFs=fontSize+3;
     const testLines=wrapArabicText(text,maxTextWidth,nextFs,variant.font);
@@ -869,6 +871,21 @@ const STYLE_CONFIGS={
       {font:FONT_FAMILY,textColor:'#2a1a08',textShadow:'rgba(0,0,0,0.28)',textHighlight:'rgba(255,245,220,0.75)'},
       {font:FONT_FAMILY_B,textColor:'#4a2a10',textShadow:'rgba(0,0,0,0.32)',textHighlight:'rgba(255,245,220,0.75)'},
       {font:FONT_FAMILY_C,textColor:'#1a0a00',textShadow:'rgba(0,0,0,0.3)',textHighlight:'rgba(255,245,220,0.75)'}
+    ]
+  },
+  lightgold:{
+    bgColors:['#f7ecd0','#e8d4a0','#c9a961'],
+    vignette:['rgba(255,255,230,0.5)','rgba(139,105,20,0.25)'],
+    frames:[{color:'#8b6914',width:5,inset:38},{color:'#5c4a2f',width:1.5,inset:58},{color:'rgba(139,105,20,0.4)',width:1,inset:66}],
+    cornerColor:'#8b6914',cornerSize:140,cornerInset:66,
+    stars:true,starsColor:'#8b6914',
+    ornamentColor:'#8b6914',quoteMarkColor:'#3a2612',
+    bookColor:'#2a1a08',authorColor:'#4a3520',watermarkColor:'#5a3a10',
+    topDividerWidth:320,bottomDividerWidth:260,
+    variants:[
+      {font:FONT_FAMILY,textColor:'#000000',textShadow:'rgba(139,105,20,0.35)',textHighlight:'rgba(255,255,220,0.85)'},
+      {font:FONT_FAMILY_B,textColor:'#000000',textShadow:'rgba(139,105,20,0.35)',textHighlight:'rgba(255,255,220,0.85)'},
+      {font:FONT_FAMILY_C,textColor:'#000000',textShadow:'rgba(139,105,20,0.35)',textHighlight:'rgba(255,255,220,0.85)'}
     ]
   }
 };
@@ -1523,7 +1540,6 @@ function initApp(){
       });
     });
 
-    // ✅ أزرار الاتجاه
     document.getElementById('orientPortrait').addEventListener('click',async()=>{
       if(state.orientation==='portrait')return;
       state.orientation='portrait';
