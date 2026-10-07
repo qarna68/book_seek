@@ -57,11 +57,26 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .progress-bar { background: #2b6cb0; height: 100%; width: 0; transition: width 0.3s; }
 .img-preview { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 12px; flex-direction: column; gap: 12px; overflow-y: auto; }
 .img-preview img { max-width: 100%; max-height: 50vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
-.img-preview .btn { max-width: 200px; }
-.style-picker { display: flex; gap: 6px; max-width: 100%; flex-wrap: wrap; justify-content: center; }
-.style-chip { padding: 6px 10px; border-radius: 20px; font-size: 11px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-family: inherit; }
-.style-chip.active { background: #b8945a; border-color: #b8945a; font-weight: 700; }
+
+/* ✅ شبكة أنماط موسّعة (16 نمط) */
+.style-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  width: 100%;
+  max-width: 440px;
+}
+.style-chip {
+  padding: 9px 4px; border-radius: 10px; font-size: 10.5px;
+  border: 2px solid rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.08); color: #fff;
+  cursor: pointer; font-family: inherit; font-weight: 700;
+  -webkit-appearance: none; appearance: none;
+  min-height: 38px; line-height: 1.2;
+}
+.style-chip.active { background: #b8945a; border-color: #b8945a; color: #fff; box-shadow: 0 0 0 2px rgba(184,148,90,0.4); }
 .style-chip:disabled { opacity: 0.5; cursor: wait; }
+
 #editPanel { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
 #editTextarea { width: 100%; height: 110px; padding: 12px; border-radius: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; font-size: 15px; font-family: inherit; direction: rtl; line-height: 1.7; resize: vertical; }
 .preview-actions { display: flex; gap: 8px; width: 100%; max-width: 440px; flex-wrap: wrap; justify-content: center; }
@@ -87,6 +102,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .video-box { background: #1a202c; color: #fff; padding: 20px; border-radius: 16px; max-width: 420px; width: 100%; text-align: center; }
 .video-box h3 { font-size: 16px; margin-bottom: 12px; }
 .video-box p { font-size: 13px; opacity: 0.8; margin-bottom: 16px; line-height: 1.7; }
+.video-style-info { margin: 8px 0 12px; font-size: 12.5px; opacity: 0.9; color: #b8945a; font-weight: 700; }
 .video-progress { background: rgba(255,255,255,0.1); border-radius: 10px; height: 10px; overflow: hidden; margin: 16px 0; }
 .video-progress-bar { background: linear-gradient(90deg, #b83280, #b8945a); height: 100%; width: 0; transition: width 0.3s; }
 .video-percent { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #b8945a; }
@@ -147,6 +163,14 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
     <button type="button" class="style-chip" data-style="night">🌌 ليلي</button>
     <button type="button" class="style-chip" data-style="news">📰 خبر</button>
     <button type="button" class="style-chip" data-style="emerald">💡 نصيحة</button>
+    <button type="button" class="style-chip" data-style="royal">👑 ملكي</button>
+    <button type="button" class="style-chip" data-style="sunset">🌅 غروب</button>
+    <button type="button" class="style-chip" data-style="ocean">🌊 محيطي</button>
+    <button type="button" class="style-chip" data-style="rose">🌹 وردي</button>
+    <button type="button" class="style-chip" data-style="desert">🏜️ صحراوي</button>
+    <button type="button" class="style-chip" data-style="plum">🍇 عنابي</button>
+    <button type="button" class="style-chip" data-style="lavender">💜 بنفسجي</button>
+    <button type="button" class="style-chip" data-style="copper">🟤 نحاسي</button>
   </div>
   <img id="previewImg" alt="preview">
   <div id="editPanel" class="hidden">
@@ -172,6 +196,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 <div id="videoOverlay" class="video-overlay hidden">
   <div class="video-box">
     <h3>🎬 جاري توليد الفيديو...</h3>
+    <div id="videoStyleInfo" class="video-style-info"></div>
     <p id="videoDurationInfo" class="duration-info"></p>
     <div class="video-percent" id="videoPercent">0%</div>
     <div class="video-progress"><div class="video-progress-bar" id="videoProgressBar"></div></div>
@@ -228,8 +253,13 @@ const FORMAT_STORAGE = 'quotes_image_format';
 const STYLE_NAMES = {
   naskh: '📜 نسخي فاخر', oriental: '🌙 شرقي', classic: '🏛️ كلاسيكي', modern: '⚡ حديث',
   islamic: '🕌 إسلامي مزخرف', night: '🌌 ليلي بنجوم', news: '📰 خبر عاجل', emerald: '💡 نصيحة زمردي',
+  royal: '👑 ملكي', sunset: '🌅 غروب', ocean: '🌊 محيطي', rose: '🌹 وردي',
+  desert: '🏜️ صحراوي', plum: '🍇 عنابي', lavender: '💜 بنفسجي', copper: '🟤 نحاسي',
 };
-const STYLE_ORDER = ['naskh', 'oriental', 'classic', 'modern', 'islamic', 'night', 'news', 'emerald'];
+const STYLE_ORDER = [
+  'naskh', 'oriental', 'classic', 'modern', 'islamic', 'night', 'news', 'emerald',
+  'royal', 'sunset', 'ocean', 'rose', 'desert', 'plum', 'lavender', 'copper',
+];
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30];
 
@@ -248,7 +278,6 @@ const ANIMATION_NAMES = {
   [ANIM_FADE]: 'تدريجي كامل',
 };
 
-// ✅ تنسيقات الصورة
 const FORMAT_PORTRAIT = 'portrait';
 const FORMAT_LANDSCAPE = 'landscape';
 const FORMAT_OPTIONS = [FORMAT_PORTRAIT, FORMAT_LANDSCAPE];
@@ -356,49 +385,31 @@ function updateFormatButton() {
   if (btn) btn.textContent = FORMAT_LABELS[state.imageFormat] || '📱 طولي';
 }
 
-// ✅ معاملات التنسيق (تتغير حسب الطولي/العرضي)
 function getFormatParams() {
   if (state.imageFormat === FORMAT_LANDSCAPE) {
     return {
       W: 1920, H: 1080,
-      topDiv1: 170,        // الفاصل العلوي للأنماط العادية
-      topDiv2: 130,        // الفاصل العلوي للحديث/الخبر
-      bottomDiv1: 855,     // الفاصل السفلي للأنماط العادية
-      bottomDiv2: 890,     // الفاصل السفلي للحديث/الخبر
-      quoteMarkX: 60,
-      quoteMarkY: 175,
-      quoteMarkSize: 140,
-      quoteMarkXModern: 40,
-      quoteMarkYModern: 190,
-      quoteMarkSizeModern: 180,
-      bookY: 945,
-      authorY: 1000,
-      cornerSize: 105,
-      modernLineY: 880,
+      topDiv1: 170, topDiv2: 130,
+      bottomDiv1: 855, bottomDiv2: 890,
+      quoteMarkX: 60, quoteMarkY: 175, quoteMarkSize: 140,
+      quoteMarkXModern: 40, quoteMarkYModern: 190, quoteMarkSizeModern: 180,
+      bookY: 945, authorY: 1000,
+      cornerSize: 105, modernLineY: 880,
     };
   }
   return {
     W: 1080, H: 1920,
-    topDiv1: 340,
-    topDiv2: 200,
-    bottomDiv1: 1520,
-    bottomDiv2: 1600,
-    quoteMarkX: 90,
-    quoteMarkY: 230,
-    quoteMarkSize: 220,
-    quoteMarkXModern: 50,
-    quoteMarkYModern: 260,
-    quoteMarkSizeModern: 280,
-    bookY: 1720,
-    authorY: 1770,
-    cornerSize: 140,
-    modernLineY: 1620,
+    topDiv1: 340, topDiv2: 200,
+    bottomDiv1: 1520, bottomDiv2: 1600,
+    quoteMarkX: 90, quoteMarkY: 230, quoteMarkSize: 220,
+    quoteMarkXModern: 50, quoteMarkYModern: 260, quoteMarkSizeModern: 280,
+    bookY: 1720, authorY: 1770,
+    cornerSize: 140, modernLineY: 1620,
   };
 }
 
 async function extractPdfText(file) {
   if (!pdfjsReady) throw new Error('pdf.js لم يُحمّل');
-  
   setStatus('جاري فتح PDF...');
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -427,9 +438,7 @@ async function extractPdfText(file) {
       const c = await page.getTextContent();
       const raw = c.items.map(x => x.str || '').join(' ');
       const t = raw.replace(/\s+/g, ' ').trim();
-      if (t.length > 3) {
-        collected.push({ page: p, text: t });
-      }
+      if (t.length > 3) collected.push({ page: p, text: t });
     } catch (e) {}
     showProgress(true, 5 + (collected.length / TARGET) * 90);
   }
@@ -446,10 +455,9 @@ async function extractPdfText(file) {
       + '• الملف لا يحتوي على نص حقيقي'
     );
   }
-  
+
   collected.sort((a, b) => a.page - b.page);
   const text = collected.map(x => '[صفحة ' + x.page + ']\n' + x.text).join('\n\n');
-  
   showProgress(false);
   return { text, totalPages, collectedPages: collected.length, scannedPages };
 }
@@ -570,28 +578,23 @@ function escapeXml(s) {
   return String(s).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
 }
 
-let _measureSvg = null, _measureText = null;
+// ✅ قياس نص موثوق عبر Canvas (أدق بكثير من SVG المخفي على iOS)
+const _measureCanvas = document.createElement('canvas');
+const _measureCtx = _measureCanvas.getContext('2d');
+let _cachedFont = '';
+
 function measureSvgTextWidth(text, fontSize, fontWeight, fontFamily) {
-  const svgNS = 'http://www.w3.org/2000/svg';
-  if (!_measureSvg) {
-    _measureSvg = document.createElementNS(svgNS, 'svg');
-    _measureSvg.setAttribute('xmlns', svgNS);
-    _measureSvg.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;top:-9999px;';
-    _measureText = document.createElementNS(svgNS, 'text');
-    _measureSvg.appendChild(_measureText);
-    document.body.appendChild(_measureSvg);
+  const family = fontFamily || FONT_FAMILY;
+  const weight = String(fontWeight || 700);
+  const fontStr = `${weight} ${fontSize}px ${family}`;
+  if (_cachedFont !== fontStr) {
+    try { _measureCtx.font = fontStr; _cachedFont = fontStr; } catch (e) {}
   }
-  _measureText.setAttribute('font-family', fontFamily || FONT_FAMILY);
-  _measureText.setAttribute('font-size', String(fontSize));
-  _measureText.setAttribute('font-weight', String(fontWeight || 700));
-  _measureText.setAttribute('direction', 'rtl');
-  _measureText.setAttribute('text-anchor', 'middle');
-  _measureText.setAttribute('x', '500');
-  _measureText.setAttribute('y', '100');
-  _measureText.textContent = text;
   let w = 0;
-  try { w = _measureText.getComputedTextLength(); } catch (e) {
-    try { w = _measureText.getBBox().width; } catch (e2) { w = text.length * fontSize * 0.5; }
+  try { w = _measureCtx.measureText(text).width; } catch (e) { w = 0; }
+  if (!w || !isFinite(w) || w < 1) {
+    // احتياطي: تقدير عربي محافظ
+    w = text.length * fontSize * 0.62;
   }
   return w;
 }
@@ -614,16 +617,40 @@ function wrapArabicText(text, maxWidth, fontSize, fontFamily) {
   return lines;
 }
 
-// ✅ نسخة تعمل مع التنسيقين
-function computeOptimalLayout(text, W, H, config, variant) {
+// ✅ حدود آمنة داخل إطار النمط
+function getFrameSafeBounds(W, H, config) {
   const fp = getFormatParams();
-  const len = text.length;
   const isSpecial = config.isModern || config.isNews;
   const topDivider = isSpecial ? fp.topDiv2 : fp.topDiv1;
   const bottomDivider = isSpecial ? fp.bottomDiv2 : fp.bottomDiv1;
-  const availableHeight = bottomDivider - topDivider - 80;
-  const ABSOLUTE_MAX_WIDTH = W - 400;
 
+  let maxFrameInset = 0;
+  if (config.frames && config.frames.length) {
+    for (const f of config.frames) {
+      if (f.inset > maxFrameInset) maxFrameInset = f.inset;
+    }
+  }
+
+  let sideMargin = Math.max(maxFrameInset + 55, 85);
+  if (config.isModern) sideMargin = Math.max(sideMargin, 105);
+
+  return {
+    left: sideMargin,
+    right: W - sideMargin,
+    top: topDivider + 40,
+    bottom: bottomDivider - 40,
+  };
+}
+
+function computeOptimalLayout(text, W, H, config, variant) {
+  const bounds = getFrameSafeBounds(W, H, config);
+  const availW = Math.max(200, bounds.right - bounds.left);
+  const availH = Math.max(200, bounds.bottom - bounds.top);
+
+  const maxTextWidth = Math.floor(availW * 0.94);
+  const availableHeight = Math.floor(availH * 0.96);
+
+  const len = text.length;
   let fontSize;
   if (len < 120) fontSize = 70;
   else if (len < 180) fontSize = 62;
@@ -632,38 +659,36 @@ function computeOptimalLayout(text, W, H, config, variant) {
   else if (len < 480) fontSize = 44;
   else fontSize = 40;
 
-  // ✅ للعرضي نستخدم خطًا أصغر قليلاً لأن الارتفاع أقل
   if (W > H) fontSize = Math.round(fontSize * 0.95);
 
-  let maxTextWidth = ABSOLUTE_MAX_WIDTH;
   let lineHeight = Math.round(fontSize * 1.85);
   let lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
 
-  function hasAnyOverflow(lns, fs) {
+  function anyLineOverflows(lns, fs) {
     for (const ln of lns) {
       const w = measureSvgTextWidth(ln, fs, 700, variant.font);
-      if (w > ABSOLUTE_MAX_WIDTH + 30) return true;
+      if (w > maxTextWidth + 4) return true;
     }
     return false;
   }
 
   let safety = 0;
-  while (safety < 60) {
+  while (safety < 80) {
     const tooTall = (lines.length * lineHeight) > availableHeight;
-    const tooWide = hasAnyOverflow(lines, fontSize);
+    const tooWide = anyLineOverflows(lines, fontSize);
     if (!tooTall && !tooWide) break;
     fontSize -= 2;
+    if (fontSize <= 24) break;
     lineHeight = Math.round(fontSize * 1.85);
     lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
     safety++;
-    if (fontSize <= 28) break;
   }
 
   safety = 0;
   while (lines.length < 4 && fontSize < 90 && safety < 20) {
     const nextFs = fontSize + 3;
     const testLines = wrapArabicText(text, maxTextWidth, nextFs, variant.font);
-    if (hasAnyOverflow(testLines, nextFs)) break;
+    if (anyLineOverflows(testLines, nextFs)) break;
     if (testLines.length * Math.round(nextFs * 1.85) > availableHeight) break;
     fontSize = nextFs;
     lineHeight = Math.round(fontSize * 1.85);
@@ -671,7 +696,17 @@ function computeOptimalLayout(text, W, H, config, variant) {
     safety++;
   }
 
-  return { fontSize, maxTextWidth, lines, lineHeight, topDivider, bottomDivider, availableHeight };
+  const fp = getFormatParams();
+  const isSpecial = config.isModern || config.isNews;
+  const topDivider = isSpecial ? fp.topDiv2 : fp.topDiv1;
+  const bottomDivider = isSpecial ? fp.bottomDiv2 : fp.bottomDiv1;
+
+  return {
+    fontSize, maxTextWidth, lines, lineHeight,
+    topDivider, bottomDivider,
+    availableHeight,
+    bounds,
+  };
 }
 
 function buildCornerSVG(cx, cy, dirX, dirY, size, color) {
@@ -869,6 +904,7 @@ function buildQuoteSVG(opts) {
 }
 
 const STYLE_CONFIGS = {
+  // ============ الأصلية 8 ============
   naskh: {
     bgColors: ['#0a1a30', '#0f2542', '#071224'],
     vignette: ['rgba(70, 110, 170, 0.22)', 'rgba(0, 0, 0, 0.55)'],
@@ -1013,6 +1049,151 @@ const STYLE_CONFIGS = {
       { font: FONT_FAMILY_B, textColor: '#f5fcf7', textShadow: 'rgba(0,0,0,0.75)', textHighlight: 'rgba(230,255,240,0.45)' },
     ],
   },
+
+  // ============ الجديدة 8 ============
+  royal: {
+    bgColors: ['#1a0b2e', '#2d1b4e', '#0f0520'],
+    vignette: ['rgba(180, 140, 220, 0.18)', 'rgba(0, 0, 0, 0.6)'],
+    frames: [
+      { color: '#d4af37', width: 5, inset: 40 },
+      { color: '#8a6d2f', width: 1.5, inset: 60 },
+      { color: 'rgba(212,175,55,0.45)', width: 1, inset: 70 },
+    ],
+    cornerColor: '#d4af37', cornerSize: 140, cornerInset: 70,
+    khatimPattern: true, khatimColor: '#d4af37',
+    ornamentColor: '#d4af37', quoteMarkColor: '#e8d5a8',
+    bookColor: '#e8d5a8', authorColor: '#d4af37', watermarkColor: '#d4af37',
+    topDividerWidth: 320, bottomDividerWidth: 260,
+    variants: [
+      { font: FONT_FAMILY,   textColor: '#f5e6b8', textShadow: 'rgba(0,0,0,0.8)',  textHighlight: 'rgba(255,240,200,0.55)' },
+      { font: FONT_FAMILY_B, textColor: '#e8d5a8', textShadow: 'rgba(0,0,0,0.85)', textHighlight: 'rgba(255,240,200,0.55)' },
+      { font: FONT_FAMILY_C, textColor: '#d4b478', textShadow: 'rgba(0,0,0,0.8)',  textHighlight: 'rgba(255,240,200,0.5)' },
+    ],
+  },
+  sunset: {
+    bgColors: ['#3a0f1e', '#7a2a1a', '#1f0608'],
+    vignette: ['rgba(255, 160, 100, 0.22)', 'rgba(0, 0, 0, 0.55)'],
+    frames: [
+      { color: '#f5b97f', width: 4, inset: 45 },
+      { color: 'rgba(245,185,127,0.4)', width: 1, inset: 65 },
+    ],
+    cornerColor: '#f5b97f', cornerSize: 130, cornerInset: 65,
+    diamondPattern: true, diamondColor: '#f5b97f',
+    ornamentColor: '#f5b97f', quoteMarkColor: '#ffe4c4',
+    bookColor: '#ffe4c4', authorColor: '#f5b97f', watermarkColor: '#f5b97f',
+    topDividerWidth: 300, bottomDividerWidth: 240,
+    variants: [
+      { font: FONT_FAMILY,   textColor: '#ffeede', textShadow: 'rgba(0,0,0,0.7)',  textHighlight: 'rgba(255,220,180,0.5)' },
+      { font: FONT_FAMILY_C, textColor: '#ffe4c4', textShadow: 'rgba(0,0,0,0.7)',  textHighlight: 'rgba(255,220,180,0.5)' },
+      { font: FONT_FAMILY_B, textColor: '#f5d5b0', textShadow: 'rgba(0,0,0,0.75)', textHighlight: 'rgba(255,220,180,0.55)' },
+    ],
+  },
+  ocean: {
+    bgColors: ['#041e2e', '#0a3d54', '#02141f'],
+    vignette: ['rgba(120, 220, 240, 0.16)', 'rgba(0, 0, 0, 0.6)'],
+    frames: [
+      { color: '#7dd3d8', width: 4, inset: 45 },
+      { color: 'rgba(125,211,216,0.4)', width: 1, inset: 65 },
+    ],
+    cornerColor: '#7dd3d8', cornerSize: 130, cornerInset: 65,
+    diamondPattern: true, diamondColor: '#7dd3d8',
+    ornamentColor: '#7dd3d8', quoteMarkColor: '#d4f7f7',
+    bookColor: '#d4f7f7', authorColor: '#7dd3d8', watermarkColor: '#7dd3d8',
+    topDividerWidth: 300, bottomDividerWidth: 240,
+    variants: [
+      { font: FONT_FAMILY,   textColor: '#f0fdfd', textShadow: 'rgba(0,0,0,0.65)', textHighlight: 'rgba(200,245,250,0.4)' },
+      { font: FONT_FAMILY_C, textColor: '#d4f7f7', textShadow: 'rgba(0,0,0,0.65)', textHighlight: 'rgba(200,245,250,0.4)' },
+      { font: FONT_FAMILY_B, textColor: '#e8fafa', textShadow: 'rgba(0,0,0,0.7)',  textHighlight: 'rgba(200,245,250,0.45)' },
+    ],
+  },
+  rose: {
+    bgColors: ['#fdf5f7', '#fce8ee', '#f8d5e0'],
+    vignette: ['rgba(255, 240, 245, 0.45)', 'rgba(180, 100, 130, 0.18)'],
+    frames: [
+      { color: '#b8637f', width: 4, inset: 40 },
+      { color: 'rgba(184,99,127,0.5)', width: 1, inset: 60 },
+    ],
+    cornerColor: '#b8637f', cornerSize: 120, cornerInset: 60,
+    ornamentColor: '#b8637f', quoteMarkColor: 'rgba(140, 40, 70, 0.85)',
+    bookColor: '#5c2a3a', authorColor: '#8a4a5a', watermarkColor: '#b8637f',
+    topDividerWidth: 300, bottomDividerWidth: 240,
+    variants: [
+      { font: FONT_FAMILY,   textColor: '#3a1520', textShadow: 'rgba(0,0,0,0.18)', textHighlight: 'rgba(255,255,255,0.55)' },
+      { font: FONT_FAMILY_B, textColor: '#5c2a3a', textShadow: 'rgba(0,0,0,0.18)', textHighlight: 'rgba(255,255,255,0.55)' },
+      { font: FONT_FAMILY_C, textColor: '#6b1f3a', textShadow: 'rgba(0,0,0,0.18)', textHighlight: 'rgba(255,255,255,0.55)' },
+    ],
+  },
+  desert: {
+    bgColors: ['#f8ecd5', '#f0ddb8', '#e0c69a'],
+    vignette: ['rgba(255, 248, 230, 0.5)', 'rgba(150, 100, 50, 0.2)'],
+    frames: [
+      { color: '#a55a30', width: 4, inset: 42 },
+      { color: 'rgba(165,90,48,0.5)', width: 1, inset: 62 },
+    ],
+    cornerColor: '#a55a30', cornerSize: 125, cornerInset: 62,
+    ornamentColor: '#a55a30', quoteMarkColor: 'rgba(90, 45, 20, 0.9)',
+    bookColor: '#4a2810', authorColor: '#7a4a2a', watermarkColor: '#a55a30',
+    topDividerWidth: 300, bottomDividerWidth: 240,
+    variants: [
+      { font: FONT_FAMILY,   textColor: '#2a1508', textShadow: 'rgba(0,0,0,0.22)', textHighlight: 'rgba(255,245,220,0.65)' },
+      { font: FONT_FAMILY_B, textColor: '#3d1f0a', textShadow: 'rgba(0,0,0,0.22)', textHighlight: 'rgba(255,245,220,0.65)' },
+      { font: FONT_FAMILY_C, textColor: '#5a2a10', textShadow: 'rgba(0,0,0,0.22)', textHighlight: 'rgba(255,245,220,0.65)' },
+    ],
+  },
+  plum: {
+    bgColors: ['#2b0a1a', '#4a1226', '#1a0510'],
+    vignette: ['rgba(220, 130, 160, 0.18)', 'rgba(0, 0, 0, 0.65)'],
+    frames: [
+      { color: '#e8c9a0', width: 4, inset: 44 },
+      { color: 'rgba(232,201,160,0.4)', width: 1, inset: 64 },
+    ],
+    cornerColor: '#e8c9a0', cornerSize: 130, cornerInset: 64,
+    khatimPattern: true, khatimColor: '#e8c9a0',
+    ornamentColor: '#e8c9a0', quoteMarkColor: '#f5e0c0',
+    bookColor: '#f5e0c0', authorColor: '#e8c9a0', watermarkColor: '#e8c9a0',
+    topDividerWidth: 300, bottomDividerWidth: 240,
+    variants: [
+      { font: FONT_FAMILY,   textColor: '#f8e8d5', textShadow: 'rgba(0,0,0,0.75)', textHighlight: 'rgba(255,235,200,0.45)' },
+      { font: FONT_FAMILY_B, textColor: '#f0d8b8', textShadow: 'rgba(0,0,0,0.8)',  textHighlight: 'rgba(255,235,200,0.45)' },
+      { font: FONT_FAMILY_C, textColor: '#ffe8d0', textShadow: 'rgba(0,0,0,0.75)', textHighlight: 'rgba(255,235,200,0.45)' },
+    ],
+  },
+  lavender: {
+    bgColors: ['#f8f4ff', '#f0e8ff', '#e5d9f8'],
+    vignette: ['rgba(255, 255, 255, 0.45)', 'rgba(100, 60, 160, 0.15)'],
+    frames: [
+      { color: '#7c5aa8', width: 4, inset: 40 },
+      { color: 'rgba(124,90,168,0.5)', width: 1, inset: 60 },
+    ],
+    cornerColor: '#7c5aa8', cornerSize: 120, cornerInset: 60,
+    ornamentColor: '#7c5aa8', quoteMarkColor: 'rgba(70, 40, 120, 0.85)',
+    bookColor: '#3d2660', authorColor: '#6a4a90', watermarkColor: '#7c5aa8',
+    topDividerWidth: 300, bottomDividerWidth: 240,
+    variants: [
+      { font: FONT_FAMILY,   textColor: '#1e1040', textShadow: 'rgba(0,0,0,0.18)', textHighlight: 'rgba(255,255,255,0.55)' },
+      { font: FONT_FAMILY_B, textColor: '#2a1a55', textShadow: 'rgba(0,0,0,0.18)', textHighlight: 'rgba(255,255,255,0.55)' },
+      { font: FONT_FAMILY_C, textColor: '#3d2660', textShadow: 'rgba(0,0,0,0.18)', textHighlight: 'rgba(255,255,255,0.55)' },
+    ],
+  },
+  copper: {
+    bgColors: ['#1a0f08', '#3d2010', '#0f0604'],
+    vignette: ['rgba(220, 140, 80, 0.2)', 'rgba(0, 0, 0, 0.7)'],
+    frames: [
+      { color: '#c17d4a', width: 5, inset: 40 },
+      { color: '#7a4a20', width: 1.5, inset: 60 },
+      { color: 'rgba(193,125,74,0.45)', width: 1, inset: 70 },
+    ],
+    cornerColor: '#c17d4a', cornerSize: 135, cornerInset: 70,
+    khatimPattern: true, khatimColor: '#c17d4a',
+    ornamentColor: '#c17d4a', quoteMarkColor: '#f0d0a8',
+    bookColor: '#f0d0a8', authorColor: '#c17d4a', watermarkColor: '#c17d4a',
+    topDividerWidth: 300, bottomDividerWidth: 240,
+    variants: [
+      { font: FONT_FAMILY,   textColor: '#f5d8b8', textShadow: 'rgba(0,0,0,0.8)',  textHighlight: 'rgba(255,220,180,0.5)' },
+      { font: FONT_FAMILY_B, textColor: '#f0c898', textShadow: 'rgba(0,0,0,0.85)', textHighlight: 'rgba(255,220,180,0.5)' },
+      { font: FONT_FAMILY_C, textColor: '#ffdcb0', textShadow: 'rgba(0,0,0,0.8)',  textHighlight: 'rgba(255,220,180,0.5)' },
+    ],
+  },
 };
 
 async function generateQuoteImage(rawText, bookName, authorName, style, forceVariantIdx) {
@@ -1037,12 +1218,15 @@ async function generateQuoteImage(rawText, bookName, authorName, style, forceVar
   const lineHeight = layout.lineHeight;
   const topDivider = layout.topDivider;
   const bottomDivider = layout.bottomDivider;
+  const bounds = layout.bounds;
 
+  // ✅ حساب startY داخل الحدود الآمنة
   const totalH = lines.length * lineHeight;
-  const centerY = (topDivider + bottomDivider) / 2;
+  const centerY = (bounds.top + bounds.bottom) / 2;
   let startY = centerY - totalH / 2;
-  if (startY < topDivider + 30) startY = topDivider + 30;
-  if (startY + totalH > bottomDivider - 30) startY = bottomDivider - 30 - totalH;
+  if (startY < bounds.top) startY = bounds.top;
+  if (startY + totalH > bounds.bottom) startY = bounds.bottom - totalH;
+  if (startY < bounds.top) startY = bounds.top;
 
   const cx = W / 2;
   let svg;
@@ -1248,563 +1432,3 @@ async function generateQuoteVideo(rawText, style) {
   const variant = config.variants[0];
 
   const layout = computeOptimalLayout(text, W, H, config, variant);
-  const fontSize = layout.fontSize;
-  const originalLines = layout.lines;
-  const lineHeight = layout.lineHeight;
-  const topDivider = layout.topDivider;
-  const bottomDivider = layout.bottomDivider;
-
-  const totalH = originalLines.length * lineHeight;
-  const centerY = (topDivider + bottomDivider) / 2;
-  let startY = centerY - totalH / 2;
-  if (startY < topDivider + 30) startY = topDivider + 30;
-  if (startY + totalH > bottomDivider - 30) startY = bottomDivider - 30 - totalH;
-
-  const wordSeq = [];
-  originalLines.forEach((line, li) => {
-    if (!line.trim()) return;
-    line.split(/\s+/).filter(w => w).forEach(w => wordSeq.push({ line: li, word: w }));
-  });
-  const totalWords = wordSeq.length;
-
-  function buildPartialLines(upToWords) {
-    const lineWords = new Array(originalLines.length).fill(null).map(() => []);
-    for (let i = 0; i < upToWords && i < totalWords; i++) {
-      const w = wordSeq[i];
-      lineWords[w.line].push(w.word);
-    }
-    return lineWords.map(arr => arr.join(' '));
-  }
-
-  function buildPartialLinesByLine(upToLines) {
-    const result = new Array(originalLines.length).fill('');
-    let visibleCount = 0;
-    for (let i = 0; i < originalLines.length; i++) {
-      if (!originalLines[i].trim()) { result[i] = ''; continue; }
-      if (visibleCount < upToLines) {
-        result[i] = originalLines[i];
-      }
-      visibleCount++;
-    }
-    return result;
-  }
-
-  function buildFrameSVG(frameState) {
-    if (frameState.mode === 'fade') {
-      return buildQuoteSVG({
-        W, H, lines: originalLines, fontSize, lineHeight, startY, topDivider, bottomDivider,
-        bookName: state.showBook ? state.pdfName : '',
-        authorName: state.showAuthor ? state.authorName : '',
-        config, variant,
-        showQuote: state.showQuote,
-        showBook: state.showBook,
-        showAuthor: state.showAuthor,
-        textOpacity: frameState.opacity,
-      });
-    }
-    return buildQuoteSVG({
-      W, H, lines: frameState.lines, fontSize, lineHeight, startY, topDivider, bottomDivider,
-      bookName: state.showBook ? state.pdfName : '',
-      authorName: state.showAuthor ? state.authorName : '',
-      config, variant,
-      showQuote: state.showQuote,
-      showBook: state.showBook,
-      showAuthor: state.showAuthor,
-    });
-  }
-
-  const frameStates = [];
-
-  if (state.animationType === ANIM_WORD) {
-    const MAX_FRAMES = 40;
-    const step = Math.max(1, Math.ceil(totalWords / MAX_FRAMES));
-    const counts = [];
-    for (let i = 0; i <= totalWords; i += step) counts.push(i);
-    if (counts[counts.length - 1] !== totalWords) counts.push(totalWords);
-    for (const c of counts) frameStates.push({ mode: 'word', wordCount: c, lines: buildPartialLines(c) });
-  } else if (state.animationType === ANIM_LINE) {
-    const lineCount = originalLines.filter(l => l.trim()).length;
-    for (let i = 0; i <= lineCount; i++) {
-      frameStates.push({ mode: 'line', lineCount: i, lines: buildPartialLinesByLine(i) });
-    }
-  } else {
-    const STEPS = 30;
-    for (let i = 0; i <= STEPS; i++) {
-      frameStates.push({ mode: 'fade', opacity: i / STEPS });
-    }
-  }
-
-  const prerenderedImages = [];
-  const revokeUrls = [];
-  for (let i = 0; i < frameStates.length; i++) {
-    updateVideoProgress(0.05 + (i / frameStates.length) * 0.55, `رسم الإطارات... ${i + 1}/${frameStates.length}`);
-    const { img, url } = await svgToImage(buildFrameSVG(frameStates[i]));
-    revokeUrls.push(url);
-    prerenderedImages.push(img);
-    await new Promise(r => setTimeout(r, 8));
-  }
-
-  const lastFrameCanvas = document.createElement('canvas');
-  lastFrameCanvas.width = W; lastFrameCanvas.height = H;
-  const lfc = lastFrameCanvas.getContext('2d');
-  lfc.fillStyle = '#ffffff';
-  lfc.fillRect(0, 0, W, H);
-  lfc.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
-  state.lastFrameDataUrl = lastFrameCanvas.toDataURL('image/png');
-
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, W, H);
-  ctx.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
-
-  const FPS = 24;
-  const totalMs = state.videoDuration * 1000;
-  const holdMs = Math.min(5000, totalMs - 3000);
-  const animMs = totalMs - holdMs;
-
-  const stream = canvas.captureStream(FPS);
-  const mimeType = pickBestMimeType();
-
-  let recorder;
-  try {
-    recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
-  } catch (e) {
-    revokeUrls.forEach(u => URL.revokeObjectURL(u));
-    throw new Error('تعذر بدء التسجيل: ' + e.message);
-  }
-
-  const chunks = [];
-  recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-
-  function drawFrameAt(elapsedMs) {
-    let frameIdx;
-    if (elapsedMs < animMs) {
-      const progress = elapsedMs / animMs;
-      frameIdx = Math.min(prerenderedImages.length - 1, Math.floor(progress * prerenderedImages.length));
-    } else {
-      frameIdx = prerenderedImages.length - 1;
-    }
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
-    ctx.drawImage(prerenderedImages[frameIdx], 0, 0, W, H);
-  }
-
-  return new Promise((resolve, reject) => {
-    try {
-      recorder.start();
-      const startTime = performance.now();
-      let lastFrame = -1;
-      function tick() {
-        const elapsed = performance.now() - startTime;
-        if (elapsed >= totalMs) { try { recorder.stop(); } catch (e) { reject(e); } return; }
-        const currentFrame = Math.floor((elapsed / 1000) * FPS);
-        if (currentFrame !== lastFrame) { lastFrame = currentFrame; drawFrameAt(elapsed); }
-        updateVideoProgress(0.6 + (elapsed / totalMs) * 0.4, `التسجيل... ${((elapsed/totalMs)*100).toFixed(0)}%`);
-        requestAnimationFrame(tick);
-      }
-      recorder.onstop = () => {
-        try {
-          const blob = new Blob(chunks, { type: mimeType });
-          revokeUrls.forEach(u => URL.revokeObjectURL(u));
-          resolve({ blob, mimeType });
-        } catch (e) { reject(e); }
-      };
-      recorder.onerror = () => reject(new Error('فشل التسجيل'));
-      tick();
-    } catch (e) {
-      revokeUrls.forEach(u => URL.revokeObjectURL(u));
-      reject(e);
-    }
-  });
-}
-
-async function shareVideoFile(blob, mimeType) {
-  const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-  const file = new File([blob], 'quote.' + ext, { type: mimeType });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'اقتباس' }); return true; }
-    catch (e) { if (e.name === 'AbortError') return true; return false; }
-  }
-  return false;
-}
-
-function downloadVideoFile(blob, mimeType) {
-  const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'quote-' + Date.now() + '.' + ext;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-
-async function handleVideoGeneration() {
-  if (videoLock) return;
-  videoLock = true;
-
-  if (typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream) {
-    videoLock = false;
-    toast('❌ المتصفح لا يدعم توليد الفيديو');
-    return;
-  }
-
-  const totalMs = state.videoDuration * 1000;
-  const holdMs = Math.min(5000, totalMs - 3000);
-  const animMs = totalMs - holdMs;
-
-  const infoEl = document.getElementById('videoDurationInfo');
-  if (infoEl) {
-    infoEl.innerHTML =
-      '⏱️ المدة: ' + state.videoDuration + ' ث ' +
-      '(<b>' + (animMs/1000).toFixed(1) + ' ث حركة</b> + ' +
-      (holdMs/1000).toFixed(1) + ' ث ثبات)<br>' +
-      '🎬 الحركة: ' + ANIMATION_NAMES[state.animationType] + '<br>' +
-      '📐 التنسيق: ' + FORMAT_NAMES[state.imageFormat];
-  }
-
-  document.getElementById('videoOverlay').classList.remove('hidden');
-  updateVideoProgress(0, 'جاري التحضير...');
-
-  try {
-    const { blob, mimeType } = await generateQuoteVideo(state.editedText || state.currentImageText, state.imageStyle);
-    state.currentVideoBlob = blob;
-    state.currentVideoMime = mimeType;
-
-    document.getElementById('videoOverlay').classList.add('hidden');
-
-    if (state.currentVideoUrl) URL.revokeObjectURL(state.currentVideoUrl);
-    state.currentVideoUrl = URL.createObjectURL(blob);
-
-    const playable = canPlayVideoType(mimeType);
-    const isMp4 = mimeType.includes('mp4');
-
-    const videoEl = document.getElementById('videoPlayer');
-    const fallbackImg = document.getElementById('videoFallback');
-    const formatBadge = document.getElementById('formatBadge');
-    const hint = document.getElementById('videoHint');
-
-    if (playable) {
-      videoEl.src = state.currentVideoUrl;
-      videoEl.style.display = 'block';
-      fallbackImg.style.display = 'none';
-      formatBadge.textContent = '✅ ' + (isMp4 ? 'MP4' : 'WebM') + ' — ' + state.videoDuration + ' ث (' + ANIMATION_NAMES[state.animationType] + ' / ' + FORMAT_NAMES[state.imageFormat] + ')';
-      formatBadge.className = 'format-badge ok';
-      hint.innerHTML = isMp4
-        ? '💡 <b>لحفظ الفيديو في تطبيق الصور:</b><br>اضغط "📤 مشاركة" ثم اختر <b>"حفظ الفيديو"</b> من قائمة iOS.'
-        : '💡 <b>للمشاركة:</b> اضغط "📤 مشاركة" لإرساله على WhatsApp/Telegram.<br>⚠️ لحفظه في الصور، استخدم CapCut.';
-    } else {
-      videoEl.style.display = 'none';
-      fallbackImg.src = state.lastFrameDataUrl;
-      fallbackImg.style.display = 'block';
-      formatBadge.textContent = '⚠️ ' + (isMp4 ? 'MP4' : 'WebM') + ' — ' + state.videoDuration + ' ث';
-      formatBadge.className = 'format-badge warn';
-      hint.innerHTML = '💡 <b>الفيديو جاهز لكن Safari لا يمكنه معاينته.</b><br>' +
-        '• للمشاركة المباشرة: اضغط "📤 مشاركة".<br>' +
-        '• للحفظ في الصور: اضغط "💾 حفظ في الملفات" ثم افتحه في <b>CapCut</b>.';
-    }
-
-    document.getElementById('videoPreview').classList.remove('hidden');
-
-    document.getElementById('shareVideoBtn').onclick = async () => {
-      toast('📤 جاري فتح قائمة المشاركة...', 1500);
-      const ok = await shareVideoFile(blob, mimeType);
-      if (!ok) toast('❌ تعذر — استخدم "حفظ في الملفات"', 2500);
-    };
-    document.getElementById('downloadVideoBtn').onclick = () => {
-      downloadVideoFile(blob, mimeType);
-      toast('✅ تم حفظ الفيديو في الملفات', 1800);
-    };
-    document.getElementById('closeVideoBtn').onclick = closeVideoPreview;
-
-  } catch (e) {
-    document.getElementById('videoOverlay').classList.add('hidden');
-    toast('❌ فشل توليد الفيديو: ' + e.message, 3000);
-  } finally {
-    videoLock = false;
-  }
-}
-
-function closeVideoPreview() {
-  const videoEl = document.getElementById('videoPlayer');
-  try { videoEl.pause(); } catch (e) {}
-  videoEl.src = '';
-  if (state.currentVideoUrl) {
-    URL.revokeObjectURL(state.currentVideoUrl);
-    state.currentVideoUrl = '';
-  }
-  document.getElementById('videoPreview').classList.add('hidden');
-}
-
-function closePreview() { document.getElementById('imgPreview').classList.add('hidden'); }
-
-async function shareImage(blob) {
-  const ext = state.imageFormat === FORMAT_LANDSCAPE ? 'png' : 'png';
-  const file = new File([blob], 'quote.' + ext, { type: 'image/png' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); }
-    catch (e) { if (e.name !== 'AbortError') toast('تعذرت المشاركة'); }
-  } else {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'quote.' + ext; a.click();
-    toast('تم تحميل الصورة');
-  }
-}
-
-function findQuote(text, book) { return state.library.find(q => q.text === text && q.book === book); }
-function isFavorite(text, book) { const q = findQuote(text, book); return !!(q && q.favorite); }
-function ensureInLibrary(text, book) {
-  let q = findQuote(text, book);
-  if (!q) {
-    q = { id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()), text, book, favorite: false, date: new Date().toISOString() };
-    state.library.push(q); saveLibrary();
-  }
-  return q;
-}
-function toggleFavorite(text, book) { const q = ensureInLibrary(text, book); q.favorite = !q.favorite; saveLibrary(); }
-function openLibrary() { document.getElementById('library').classList.remove('hidden'); renderLibrary('all'); }
-function closeLibrary() { document.getElementById('library').classList.add('hidden'); }
-
-function renderLibrary(filter) {
-  const list = document.getElementById('libList'); list.innerHTML = '';
-  let items = filter === 'fav' ? state.library.filter(q => q.favorite) : [...state.library];
-  items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  document.getElementById('libCount').textContent = items.length + ' اقتباس';
-  document.getElementById('filterAll').className = 'btn ' + (filter === 'all' ? 'btn-purple' : 'btn-gray');
-  document.getElementById('filterFav').className = 'btn ' + (filter === 'fav' ? 'btn-purple' : 'btn-gray');
-  if (!items.length) { list.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:30px;">لا توجد اقتباسات بعد</div>'; return; }
-  items.forEach(q => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const dateStr = (q.date || '').substring(0, 10);
-    card.innerHTML = `
-      <div class="card-head">
-        <button class="star ${q.favorite ? 'on' : ''}">${q.favorite ? '★' : '☆'}</button>
-        <span style="font-size:11px;color:#4a5568;">📕 ${escapeHtml(q.book || '')} · ${dateStr}</span>
-      </div>
-      <div class="q-text">${escapeHtml(q.text)}</div>
-      <div class="card-actions">
-        <button class="btn btn-green" data-act="copy">📋</button>
-        <button class="btn btn-blue" data-act="share">📤</button>
-        <button class="btn btn-purple" data-act="image">📸</button>
-        <button class="btn btn-red" data-act="del">🗑</button>
-      </div>`;
-    card.querySelector('.star').addEventListener('click', () => { q.favorite = !q.favorite; saveLibrary(); renderLibrary(filter); });
-    card.querySelector('[data-act="copy"]').addEventListener('click', () => copyQuote(q.text));
-    card.querySelector('[data-act="share"]').addEventListener('click', () => shareQuote(q.text));
-    card.querySelector('[data-act="image"]').addEventListener('click', () => showQuoteImage(q.text));
-    card.querySelector('[data-act="del"]').addEventListener('click', () => {
-      if (confirm('حذف؟')) { state.library = state.library.filter(x => x.id !== q.id); saveLibrary(); renderLibrary(filter); }
-    });
-    list.appendChild(card);
-  });
-}
-
-function renderQuotes() {
-  const container = document.getElementById('quotes');
-  container.innerHTML = '';
-  if (!state.quotes.length) return;
-  const header = document.createElement('div');
-  header.style.cssText = 'font-size:13px;color:#4a5568;text-align:right;padding:8px;margin-bottom:8px;line-height:1.7;';
-  header.textContent = state.currentHeader;
-  container.appendChild(header);
-  state.quotes.forEach((quote, i) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const isFav = isFavorite(quote, state.pdfName);
-    card.innerHTML = `
-      <div class="card-head">
-        <button class="star ${isFav ? 'on' : ''}" data-idx="${i}">${isFav ? '★' : '☆'}</button>
-        <span class="q-num">❝ اقتباس ${i + 1}</span>
-      </div>
-      <div class="q-text">${escapeHtml(quote)}</div>
-      <div class="card-actions">
-        <button class="btn btn-green" data-action="copy" data-idx="${i}">📋 نسخ</button>
-        <button class="btn btn-blue" data-action="share" data-idx="${i}">📤 مشاركة</button>
-        <button class="btn btn-purple" data-action="image" data-idx="${i}">📸 صورة</button>
-      </div>`;
-    container.appendChild(card);
-  });
-  container.querySelectorAll('.star').forEach(b => b.addEventListener('click', () => {
-    toggleFavorite(state.quotes[parseInt(b.dataset.idx)], state.pdfName); renderQuotes();
-  }));
-  container.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', () => {
-    const idx = parseInt(b.dataset.idx);
-    const t = state.quotes[idx];
-    if (b.dataset.action === 'copy') copyQuote(t);
-    else if (b.dataset.action === 'share') shareQuote(t);
-    else showQuoteImage(t);
-  }));
-}
-
-function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-async function copyQuote(text) { try { await navigator.clipboard.writeText(text); toast('✅ تم النسخ'); } catch (e) { toast('❌ فشل النسخ'); } }
-async function shareQuote(text) {
-  if (navigator.share) { try { await navigator.share({ text }); } catch (e) { if (e.name !== 'AbortError') copyQuote(text); } }
-  else copyQuote(text);
-}
-
-async function generate() {
-  if (state.busy) return;
-  const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) { toast('❌ أدخل مفتاح OpenRouter'); return; }
-  if (!state.pdfFile) { toast('❌ اختر PDF أولاً'); return; }
-  saveApiKey(apiKey);
-  state.busy = true;
-  const genBtn = document.getElementById('genBtn');
-  genBtn.disabled = true; genBtn.textContent = '⏳ جاري الاستخراج...';
-  try {
-    setStatus('جاري قراءة PDF...'); showProgress(true, 0);
-    const result = await extractPdfText(state.pdfFile);
-    const text = result.text;
-    setStatus(`✓ تم جمع ${result.collectedPages} صفحة — جاري التنظيف...`);
-    let cleaned = truncateAtLine(cleanPdfText(text), 12000);
-    if (!cleaned.trim()) {
-      setStatus('النص فارغ بعد التنظيف', 'err');
-      document.getElementById('quotes').innerHTML = '<div class="card" style="color:#c53030;text-align:center;padding:20px;line-height:1.8;">تم استخراج نص، لكنه لا يحتوي محتوى عربيًا صالحًا.<br><br>قد يكون الملف مكتوبًا بلغة أخرى، أو محميًا.</div>';
-      return;
-    }
-    setStatus('جاري الاتصال بالنموذج...');
-    const { text: answer, model } = await callOpenRouter(apiKey, state.pdfName, cleaned, state.quoteCount);
-    const quotes = parseQuotes(answer);
-    state.quotes = quotes;
-    state.currentHeader = '📕 ' + state.pdfName + '\n🤖 ' + model.split('/').pop();
-    quotes.forEach(q => ensureInLibrary(q, state.pdfName));
-    renderQuotes();
-    setStatus(`✓ ${quotes.length} اقتباسات — اضغط مجدداً`, 'ok');
-    genBtn.textContent = '🔄 اقتباسات جديدة';
-  } catch (e) {
-    setStatus('حدث خطأ', 'err');
-    document.getElementById('quotes').innerHTML = '<div class="card" style="color:#c53030;text-align:right;padding:20px;line-height:1.9;white-space:pre-wrap;">' + escapeHtml(e.message) + '</div>';
-  } finally {
-    state.busy = false; genBtn.disabled = false; showProgress(false);
-  }
-}
-
-function initApp() {
-  try {
-    loadLibrary(); loadApiKey();
-    ensureFonts().catch(() => {});
-
-    document.getElementById('pickPdfBtn').addEventListener('click', () => document.getElementById('pdfInput').click());
-    document.getElementById('pdfInput').addEventListener('change', (e) => {
-      const f = e.target.files[0]; if (!f) return;
-      state.pdfFile = f; state.pdfName = f.name;
-      if (!document.getElementById('bookName').value) {
-        document.getElementById('bookName').value = f.name.replace(/\.pdf$/i, '');
-        state.pdfName = f.name.replace(/\.pdf$/i, '');
-      }
-      setStatus('✓ ' + f.name, 'ok');
-      state.quotes = []; document.getElementById('quotes').innerHTML = '';
-    });
-    document.getElementById('genBtn').addEventListener('click', generate);
-
-    document.getElementById('countBtn').addEventListener('click', function() {
-      const opts = [3, 5, 7, 10];
-      let idx = opts.indexOf(state.quoteCount);
-      idx = (idx + 1) % opts.length;
-      state.quoteCount = opts[idx];
-      this.textContent = '🔢 ' + state.quoteCount;
-    });
-
-    document.getElementById('styleBtn').addEventListener('click', function() {
-      let i = STYLE_ORDER.indexOf(state.imageStyle);
-      i = (i + 1) % STYLE_ORDER.length;
-      state.imageStyle = STYLE_ORDER[i];
-      saveStyle(state.imageStyle);
-      this.textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
-      toast('النمط: ' + STYLE_NAMES[state.imageStyle]);
-    });
-
-    document.getElementById('libBtn').addEventListener('click', openLibrary);
-    document.getElementById('filterAll').addEventListener('click', () => renderLibrary('all'));
-    document.getElementById('filterFav').addEventListener('click', () => renderLibrary('fav'));
-
-    document.getElementById('bookName').addEventListener('input', e => state.pdfName = e.target.value || 'كتاب');
-    document.getElementById('authorName').addEventListener('input', e => { state.authorName = e.target.value; saveAuthor(e.target.value); });
-
-    document.querySelectorAll('.style-chip').forEach(chip => {
-      chip.addEventListener('click', async () => {
-        if (generateLock) return;
-        state.imageStyle = chip.dataset.style;
-        saveStyle(state.imageStyle);
-        state.currentVariantIdx = null;
-        document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
-        await showQuoteImage(state.editedText || state.currentImageText, state.imageStyle);
-      });
-    });
-
-    document.getElementById('editQuoteBtn').addEventListener('click', enterEditMode);
-    document.getElementById('regenBtn').addEventListener('click', regenerateCurrent);
-    document.getElementById('videoBtn').addEventListener('click', handleVideoGeneration);
-
-    document.getElementById('durationBtn').addEventListener('click', function() {
-      let idx = DURATION_OPTIONS.indexOf(state.videoDuration);
-      idx = (idx + 1) % DURATION_OPTIONS.length;
-      state.videoDuration = DURATION_OPTIONS[idx];
-      saveDuration(state.videoDuration);
-      updateDurationButton();
-      toast('⏱️ المدة: ' + state.videoDuration + ' ثوانٍ', 1200);
-    });
-
-    document.getElementById('animationBtn').addEventListener('click', function() {
-      let idx = ANIMATION_OPTIONS.indexOf(state.animationType);
-      idx = (idx + 1) % ANIMATION_OPTIONS.length;
-      state.animationType = ANIMATION_OPTIONS[idx];
-      saveAnimation(state.animationType);
-      updateAnimationButton();
-      toast('🎬 الحركة: ' + ANIMATION_NAMES[state.animationType], 1400);
-    });
-
-    // ✅ زر التنسيق — يبدّل بين طولي وعرضي
-    document.getElementById('formatBtn').addEventListener('click', async function() {
-      if (generateLock) return;
-      let idx = FORMAT_OPTIONS.indexOf(state.imageFormat);
-      idx = (idx + 1) % FORMAT_OPTIONS.length;
-      state.imageFormat = FORMAT_OPTIONS[idx];
-      saveFormat(state.imageFormat);
-      updateFormatButton();
-      toast('📐 التنسيق: ' + FORMAT_NAMES[state.imageFormat], 1400);
-      await showQuoteImage(state.editedText || state.currentImageText, state.imageStyle);
-    });
-
-    document.getElementById('toggleQuoteBtn').addEventListener('click', async () => {
-      state.showQuote = !state.showQuote;
-      updateToggleUI();
-      toast(state.showQuote ? '❝ إظهار علامة الاقتباس' : '🚫 إخفاء علامة الاقتباس', 1200);
-      await regenerateCurrent();
-    });
-    document.getElementById('toggleBookBtn').addEventListener('click', async () => {
-      state.showBook = !state.showBook;
-      updateToggleUI();
-      toast(state.showBook ? '📖 إظهار اسم الكتاب' : '🚫 إخفاء اسم الكتاب', 1200);
-      await regenerateCurrent();
-    });
-    document.getElementById('toggleAuthorBtn').addEventListener('click', async () => {
-      state.showAuthor = !state.showAuthor;
-      updateToggleUI();
-      toast(state.showAuthor ? '✍ إظهار المؤلف' : '🚫 إخفاء المؤلف', 1200);
-      await regenerateCurrent();
-    });
-
-    updateToggleUI();
-    updateDurationButton();
-    updateAnimationButton();
-    updateFormatButton();
-  } catch (e) {
-    showErr('init: ' + e.message);
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
-}
-</script>
-</body>
-</html>
