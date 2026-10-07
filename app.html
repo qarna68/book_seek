@@ -55,7 +55,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .progress { background: #e2e8f0; border-radius: 8px; height: 6px; overflow: hidden; margin: 8px 0; }
 .progress-bar { background: #2b6cb0; height: 100%; width: 0; transition: width 0.3s; }
 .img-preview { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 300; display: flex; align-items: center; justify-content: center; padding: 12px; flex-direction: column; gap: 12px; overflow-y: auto; }
-.img-preview img { max-width: 100%; max-height: 42vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
+.img-preview img { max-width: 100%; max-height: 38vh; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }
 .img-preview .btn { max-width: 200px; }
 .style-picker { display: flex; gap: 6px; max-width: 100%; flex-wrap: wrap; justify-content: center; }
 .style-chip { padding: 6px 10px; border-radius: 20px; font-size: 11px; border: 2px solid rgba(255,255,255,0.3); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; font-family: inherit; }
@@ -63,7 +63,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .style-chip:disabled { opacity: 0.5; cursor: wait; }
 #editPanel { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
 #editTextarea { width: 100%; height: 110px; padding: 12px; border-radius: 10px; border: 1px solid #4a5568; background: #1a202c; color: #fff; font-size: 15px; font-family: inherit; direction: rtl; line-height: 1.7; resize: vertical; }
-.preview-actions { display: flex; gap: 8px; width: 100%; max-width: 420px; flex-wrap: wrap; justify-content: center; }
+.preview-actions { display: flex; gap: 8px; width: 100%; max-width: 500px; flex-wrap: wrap; justify-content: center; }
 .preview-actions .btn { padding: 10px; font-size: 13px; flex: 1; min-width: 90px; }
 .toggle-row { display: flex; gap: 8px; width: 100%; flex-wrap: wrap; }
 
@@ -81,6 +81,17 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
 .toggle-btn.on { background: #2f855a; border-color: #2f855a; color: #fff; box-shadow: 0 0 0 2px rgba(47,133,90,0.3); }
 .toggle-btn.off { background: #718096; border-color: #718096; color: #fff; }
 .toggle-btn:disabled { opacity: 0.5; }
+
+/* ✅ شريط اتجاه الصورة */
+.orientation-row { display: flex; gap: 6px; width: 100%; max-width: 420px; }
+.orient-btn {
+  flex: 1; padding: 10px 6px; border-radius: 10px;
+  border: 2px solid #718096; background: rgba(255,255,255,0.05);
+  color: #cbd5e0; font-family: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+}
+.orient-btn.on { background: #2b6cb0; border-color: #2b6cb0; color: #fff; }
+.orient-btn:active { transform: scale(0.96); }
 
 .video-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 400; display: flex; align-items: center; justify-content: center; padding: 20px; overflow-y: auto; }
 .video-box { background: #1a202c; color: #fff; padding: 20px; border-radius: 16px; max-width: 400px; width: 100%; text-align: center; }
@@ -146,7 +157,19 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
     <button type="button" class="style-chip" data-style="night">🌌 ليلي</button>
     <button type="button" class="style-chip" data-style="news">📰 خبر</button>
     <button type="button" class="style-chip" data-style="emerald">💡 نصيحة</button>
+    <!-- ✅ الأنماط الجديدة -->
+    <button type="button" class="style-chip" data-style="sunset">🌅 غروب</button>
+    <button type="button" class="style-chip" data-style="ocean">🌊 محيط</button>
+    <button type="button" class="style-chip" data-style="royal">👑 ملكي</button>
+    <button type="button" class="style-chip" data-style="sand">🏜️ رملي</button>
   </div>
+
+  <!-- ✅ شريط اتجاه الصورة -->
+  <div class="orientation-row">
+    <button type="button" id="orientPortrait" class="orient-btn on">📱 طولي</button>
+    <button type="button" id="orientLandscape" class="orient-btn">🖥️ عرضي</button>
+  </div>
+
   <img id="previewImg" alt="preview">
   <div id="editPanel" class="hidden">
     <textarea id="editTextarea" placeholder="عدّل النص هنا..."></textarea>
@@ -162,6 +185,7 @@ h1 { font-size: 18px; text-align: center; margin-bottom: 16px; font-weight: 700;
     <button type="button" id="animationBtn" class="btn btn-orange">✍️ كلمة</button>
     <button type="button" id="videoBtn" class="btn btn-pink">🎬 فيديو</button>
     <button type="button" id="regenBtn" class="btn btn-green hidden">🎨 توليد</button>
+    <button type="button" id="saveBothBtn" class="btn btn-gold">📐 حفظ الاثنين</button>
     <button type="button" id="shareImgBtn" class="btn btn-blue">📤 مشاركة</button>
     <button type="button" onclick="closePreview()" class="btn btn-red">إغلاق</button>
   </div>
@@ -221,19 +245,21 @@ const STYLE_STORAGE = 'quotes_style';
 const VARIANT_STORAGE = 'quotes_variant_index';
 const DURATION_STORAGE = 'quotes_video_duration';
 const ANIMATION_STORAGE = 'quotes_video_animation';
+const ORIENTATION_STORAGE = 'quotes_orientation';
 
 const STYLE_NAMES = {
   naskh: '📜 نسخي فاخر', oriental: '🌙 شرقي', classic: '🏛️ كلاسيكي', modern: '⚡ حديث',
   islamic: '🕌 إسلامي مزخرف', night: '🌌 ليلي بنجوم', news: '📰 خبر عاجل', emerald: '💡 نصيحة زمردي',
+  // ✅ أنماط جديدة
+  sunset: '🌅 غروب ذهبي', ocean: '🌊 محيط عميق', royal: '👑 ملكي فاخر', sand: '🏜️ رملي دافئ',
 };
-const STYLE_ORDER = ['naskh', 'oriental', 'classic', 'modern', 'islamic', 'night', 'news', 'emerald'];
+const STYLE_ORDER = ['naskh', 'oriental', 'classic', 'modern', 'islamic', 'night', 'news', 'emerald', 'sunset', 'ocean', 'royal', 'sand'];
 
 const DURATION_OPTIONS = [5, 10, 15, 20, 30];
 
-// ✅ أنواع الحركات
-const ANIM_WORD = 'word';   // كلمة بكلمة
-const ANIM_LINE = 'line';   // سطر بسطر
-const ANIM_FADE = 'fade';   // تدريجي
+const ANIM_WORD = 'word';
+const ANIM_LINE = 'line';
+const ANIM_FADE = 'fade';
 const ANIMATION_OPTIONS = [ANIM_WORD, ANIM_LINE, ANIM_FADE];
 const ANIMATION_LABELS = {
   [ANIM_WORD]: '✍️ كلمة',
@@ -249,6 +275,10 @@ const ANIMATION_NAMES = {
 const FONT_FAMILY = "Amiri, 'Noto Naskh Arabic', 'Scheherazade New', Georgia, serif";
 const FONT_FAMILY_B = "'Aref Ruqaa', Amiri, 'Scheherazade New', Georgia, serif";
 const FONT_FAMILY_C = "'Scheherazade New', Amiri, Georgia, serif";
+
+// ✅ أبعاد الصور
+const SIZE_PORTRAIT = { W: 1080, H: 1920 };
+const SIZE_LANDSCAPE = { W: 1920, H: 1080 };
 
 let variantCounter = 0;
 try { variantCounter = parseInt(localStorage.getItem(VARIANT_STORAGE) || '0', 10); } catch (e) {}
@@ -274,6 +304,9 @@ let state = {
   lastFrameDataUrl: '',
   videoDuration: 10,
   animationType: ANIM_WORD,
+  // ✅ جديد: اتجاه الصورة + تخزين مؤقت للنسختين
+  orientation: 'portrait',
+  imageBlobCache: { portrait: null, landscape: null },
 };
 
 let fontsReady = false;
@@ -313,8 +346,11 @@ function loadApiKey() {
     if (DURATION_OPTIONS.includes(d)) { state.videoDuration = d; }
     const an = localStorage.getItem(ANIMATION_STORAGE);
     if (an && ANIMATION_OPTIONS.includes(an)) { state.animationType = an; }
+    const or = localStorage.getItem(ORIENTATION_STORAGE);
+    if (or === 'portrait' || or === 'landscape') { state.orientation = or; }
     updateDurationButton();
     updateAnimationButton();
+    updateOrientationUI();
   } catch (e) {}
 }
 function saveApiKey(k) { try { localStorage.setItem(API_KEY_STORAGE, k); } catch (e) {} }
@@ -322,6 +358,7 @@ function saveAuthor(a) { try { localStorage.setItem(AUTHOR_STORAGE, a); } catch 
 function saveStyle(s) { try { localStorage.setItem(STYLE_STORAGE, s); } catch (e) {} }
 function saveDuration(d) { try { localStorage.setItem(DURATION_STORAGE, String(d)); } catch (e) {} }
 function saveAnimation(a) { try { localStorage.setItem(ANIMATION_STORAGE, a); } catch (e) {} }
+function saveOrientation(o) { try { localStorage.setItem(ORIENTATION_STORAGE, o); } catch (e) {} }
 
 function updateDurationButton() {
   const btn = document.getElementById('durationBtn');
@@ -330,6 +367,14 @@ function updateDurationButton() {
 function updateAnimationButton() {
   const btn = document.getElementById('animationBtn');
   if (btn) btn.textContent = ANIMATION_LABELS[state.animationType] || '✍️ كلمة';
+}
+// ✅ تحديث شريط الاتجاه
+function updateOrientationUI() {
+  const p = document.getElementById('orientPortrait');
+  const l = document.getElementById('orientLandscape');
+  if (!p || !l) return;
+  p.classList.toggle('on', state.orientation === 'portrait');
+  l.classList.toggle('on', state.orientation === 'landscape');
 }
 
 async function extractPdfText(file) {
@@ -464,7 +509,6 @@ ${bookText}`;
   throw new Error('فشلت المحاولات:\n' + errors.join('\n'));
 }
 
-// ============== SVG Helpers ==============
 function escapeXml(s) {
   return String(s).replace(/[<>&'"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]));
 }
@@ -475,1209 +519,4 @@ function measureSvgTextWidth(text, fontSize, fontWeight, fontFamily) {
   if (!_measureSvg) {
     _measureSvg = document.createElementNS(svgNS, 'svg');
     _measureSvg.setAttribute('xmlns', svgNS);
-    _measureSvg.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;top:-9999px;';
-    _measureText = document.createElementNS(svgNS, 'text');
-    _measureSvg.appendChild(_measureText);
-    document.body.appendChild(_measureSvg);
-  }
-  _measureText.setAttribute('font-family', fontFamily || FONT_FAMILY);
-  _measureText.setAttribute('font-size', String(fontSize));
-  _measureText.setAttribute('font-weight', String(fontWeight || 700));
-  _measureText.setAttribute('direction', 'rtl');
-  _measureText.setAttribute('text-anchor', 'middle');
-  _measureText.setAttribute('x', '500');
-  _measureText.setAttribute('y', '100');
-  _measureText.textContent = text;
-  let w = 0;
-  try { w = _measureText.getComputedTextLength(); } catch (e) {
-    try { w = _measureText.getBBox().width; } catch (e2) { w = text.length * fontSize * 0.5; }
-  }
-  return w;
-}
-
-function wrapArabicText(text, maxWidth, fontSize, fontFamily) {
-  const lines = [];
-  const paragraphs = text.split('\n');
-  for (const para of paragraphs) {
-    if (!para.trim()) { lines.push(''); continue; }
-    const words = para.split(/\s+/);
-    let current = '';
-    for (const word of words) {
-      const test = current ? current + ' ' + word : word;
-      const w = measureSvgTextWidth(test, fontSize, 700, fontFamily);
-      if (w > maxWidth && current) { lines.push(current); current = word; }
-      else { current = test; }
-    }
-    if (current) lines.push(current);
-  }
-  return lines;
-}
-
-function computeOptimalLayout(text, W, H, config, variant) {
-  const len = text.length;
-  const topDivider = config.isModern || config.isNews ? 200 : 340;
-  const bottomDivider = config.isModern || config.isNews ? H - 320 : H - 400;
-  const availableHeight = bottomDivider - topDivider - 80;
-  const ABSOLUTE_MAX_WIDTH = W - 400;
-
-  let fontSize;
-  if (len < 120) fontSize = 70;
-  else if (len < 180) fontSize = 62;
-  else if (len < 260) fontSize = 56;
-  else if (len < 360) fontSize = 50;
-  else if (len < 480) fontSize = 44;
-  else fontSize = 40;
-
-  let maxTextWidth = ABSOLUTE_MAX_WIDTH;
-  let lineHeight = Math.round(fontSize * 1.85);
-  let lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
-
-  function hasAnyOverflow(lns, fs) {
-    for (const ln of lns) {
-      const w = measureSvgTextWidth(ln, fs, 700, variant.font);
-      if (w > ABSOLUTE_MAX_WIDTH + 30) return true;
-    }
-    return false;
-  }
-
-  let safety = 0;
-  while (safety < 60) {
-    const tooTall = (lines.length * lineHeight) > availableHeight;
-    const tooWide = hasAnyOverflow(lines, fontSize);
-    if (!tooTall && !tooWide) break;
-    fontSize -= 2;
-    lineHeight = Math.round(fontSize * 1.85);
-    lines = wrapArabicText(text, maxTextWidth, fontSize, variant.font);
-    safety++;
-    if (fontSize <= 30) break;
-  }
-
-  safety = 0;
-  while (lines.length < 4 && fontSize < 90 && safety < 20) {
-    const nextFs = fontSize + 3;
-    const testLines = wrapArabicText(text, maxTextWidth, nextFs, variant.font);
-    if (hasAnyOverflow(testLines, nextFs)) break;
-    if (testLines.length * Math.round(nextFs * 1.85) > availableHeight) break;
-    fontSize = nextFs;
-    lineHeight = Math.round(fontSize * 1.85);
-    lines = testLines;
-    safety++;
-  }
-
-  return { fontSize, maxTextWidth, lines, lineHeight, topDivider, bottomDivider, availableHeight };
-}
-
-function buildCornerSVG(cx, cy, dirX, dirY, size, color) {
-  const L = size;
-  let g = `<g stroke="${color}" fill="${color}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">`;
-  g += `<line x1="${cx}" y1="${cy}" x2="${cx + L*dirX}" y2="${cy}"/>`;
-  g += `<line x1="${cx}" y1="${cy}" x2="${cx}" y2="${cy + L*dirY}"/>`;
-  g += `<circle cx="${cx + L*dirX}" cy="${cy}" r="3"/>`;
-  g += `<circle cx="${cx}" cy="${cy + L*dirY}" r="3"/>`;
-  g += `<path d="M ${cx + 40*dirX} ${cy} C ${cx + 70*dirX} ${cy + 25*dirY}, ${cx + 100*dirX} ${cy + 10*dirY}, ${cx + 85*dirX} ${cy + 35*dirY}" fill="none"/>`;
-  g += `<path d="M ${cx + 55*dirX} ${cy + 5*dirY} Q ${cx + 75*dirX} ${cy - 15*dirY} ${cx + 90*dirX} ${cy + 5*dirY} Q ${cx + 75*dirX} ${cy + 15*dirY} ${cx + 55*dirX} ${cy + 5*dirY} Z" stroke="none"/>`;
-  g += `<path d="M ${cx} ${cy + 40*dirY} C ${cx + 25*dirX} ${cy + 70*dirY}, ${cx + 10*dirX} ${cy + 100*dirY}, ${cx + 35*dirX} ${cy + 85*dirY}" fill="none"/>`;
-  g += `<path d="M ${cx + 5*dirX} ${cy + 55*dirY} Q ${cx - 15*dirX} ${cy + 75*dirY} ${cx + 5*dirX} ${cy + 90*dirY} Q ${cx + 15*dirX} ${cy + 75*dirY} ${cx + 5*dirX} ${cy + 55*dirY} Z" stroke="none"/>`;
-  g += '</g>';
-  return g;
-}
-
-function buildDividerSVG(cx, y, width, color) {
-  if (!width) return '';
-  const half = width / 2;
-  let g = `<g stroke="${color}" fill="${color}" stroke-width="1.5">`;
-  g += `<line x1="${cx - half}" y1="${y}" x2="${cx - 15}" y2="${y}"/>`;
-  g += `<line x1="${cx + 15}" y1="${y}" x2="${cx + half}" y2="${y}"/>`;
-  g += `<polygon points="${cx},${y-6} ${cx+6},${y} ${cx},${y+6} ${cx-6},${y}" stroke="none"/>`;
-  g += `<polygon points="${cx-half-6},${y-3} ${cx-half},${y} ${cx-half-6},${y+3} ${cx-half-12},${y}" stroke="none"/>`;
-  g += `<polygon points="${cx+half+6},${y-3} ${cx+half},${y} ${cx+half+6},${y+3} ${cx+half+12},${y}" stroke="none"/>`;
-  g += '</g>';
-  return g;
-}
-
-function buildKhatimPatternSVG(W, H, color, opacity) {
-  const spacing = 110;
-  let s = `<g stroke="${color}" fill="none" stroke-width="1.5" opacity="${opacity}">`;
-  for (let y = -spacing; y < H + spacing; y += spacing) {
-    for (let x = -spacing; x < W + spacing; x += spacing) {
-      s += `<rect x="${x-32}" y="${y-32}" width="64" height="64"/>`;
-      s += `<rect x="${x-32}" y="${y-32}" width="64" height="64" transform="rotate(45 ${x} ${y})"/>`;
-      const ox = x + spacing/2, oy = y + spacing/2;
-      s += `<rect x="${ox-32}" y="${oy-32}" width="64" height="64"/>`;
-      s += `<rect x="${ox-32}" y="${oy-32}" width="64" height="64" transform="rotate(45 ${ox} ${oy})"/>`;
-    }
-  }
-  s += `</g>`;
-  return s;
-}
-
-function buildStarsLayerSVG(W, H, count) {
-  let s = '<g>';
-  for (let i = 0; i < count; i++) {
-    const x = Math.random() * W;
-    const y = Math.random() * H * 0.9;
-    const r = Math.random() * 2 + 0.8;
-    const opacity = Math.random() * 0.6 + 0.3;
-    s += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${r.toFixed(1)}" fill="#ffffff" opacity="${opacity.toFixed(2)}"/>`;
-  }
-  s += '</g>';
-  return s;
-}
-
-function buildDiamondPatternSVG(W, H, color, opacity) {
-  const spacing = 130;
-  let s = `<g stroke="${color}" fill="none" stroke-width="0.8" opacity="${opacity}">`;
-  for (let y = 0; y < H + spacing; y += spacing) {
-    for (let x = 0; x < W + spacing; x += spacing) {
-      s += `<polygon points="${x},${y-22} ${x+22},${y} ${x},${y+22} ${x-22},${y}"/>`;
-      const ox = x + spacing/2, oy = y + spacing/2;
-      s += `<polygon points="${ox},${oy-15} ${ox+15},${oy} ${ox},${oy+15} ${ox-15},${oy}"/>`;
-    }
-  }
-  s += `</g>`;
-  return s;
-}
-
-function buildNewsBracketsSVG(W, H, color, thickness) {
-  const pad = 130;
-  const armLen = 300;
-  let s = `<g stroke="${color}" fill="none" stroke-width="${thickness}" stroke-linecap="square">`;
-  s += `<line x1="${pad}" y1="${pad}" x2="${pad + armLen}" y2="${pad}"/>`;
-  s += `<line x1="${pad}" y1="${pad}" x2="${pad}" y2="${pad + armLen}"/>`;
-  s += `<line x1="${W - pad}" y1="${H - pad}" x2="${W - pad - armLen}" y2="${H - pad}"/>`;
-  s += `<line x1="${W - pad}" y1="${H - pad}" x2="${W - pad}" y2="${H - pad - armLen}"/>`;
-  s += '</g>';
-  return s;
-}
-
-// ✅ buildQuoteSVG مع دعم textOpacity للحركة التدريجية
-function buildQuoteSVG(opts) {
-  const { W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant, showQuote, showBook, showAuthor, textOpacity } = opts;
-  const op = (typeof textOpacity === 'number') ? textOpacity : 1;
-  const NS = 'xmlns="http://www.w3.org/2000/svg"';
-  const font = variant.font;
-  const textColor = variant.textColor;
-  const textShadow = variant.textShadow;
-  const textHighlight = variant.textHighlight;
-  const cx = W / 2;
-
-  let s = `<svg ${NS} width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
-
-  // الخلفية والإطارات — دائمًا مرئية
-  s += `<defs>
-    <linearGradient id="bgGrad" x1="0" y1="0" x2="1" y2="1">
-      ${config.bgColors.map((c, i) => `<stop offset="${(i / (config.bgColors.length - 1) * 100).toFixed(1)}%" stop-color="${c}"/>`).join('')}
-    </linearGradient>
-    <radialGradient id="vgGrad" cx="50%" cy="50%" r="60%">
-      <stop offset="0%" stop-color="${config.vignette[0]}"/>
-      <stop offset="100%" stop-color="${config.vignette[1]}"/>
-    </radialGradient>
-  </defs>`;
-
-  s += `<rect width="${W}" height="${H}" fill="url(#bgGrad)"/>`;
-  s += `<rect width="${W}" height="${H}" fill="url(#vgGrad)"/>`;
-
-  if (config.khatimPattern) s += buildKhatimPatternSVG(W, H, config.khatimColor, 0.07);
-  if (config.starsLayer) s += buildStarsLayerSVG(W, H, config.starsCount || 100);
-  if (config.diamondPattern) s += buildDiamondPatternSVG(W, H, config.diamondColor, 0.06);
-
-  if (config.stars && !config.starsLayer) {
-    s += `<g fill="${config.starsColor}" opacity="0.18">`;
-    for (let i = 0; i < 300; i++) {
-      const x = (Math.random() * W).toFixed(0);
-      const y = (Math.random() * H).toFixed(0);
-      s += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
-    }
-    s += `</g>`;
-  }
-
-  for (const f of config.frames) {
-    s += `<rect x="${f.inset}" y="${f.inset}" width="${W - f.inset*2}" height="${H - f.inset*2}" fill="none" stroke="${f.color}" stroke-width="${f.width}"/>`;
-  }
-
-  if (config.cornerColor) {
-    const c = config.cornerInset || 66;
-    s += buildCornerSVG(c, c, 1, 1, config.cornerSize, config.cornerColor);
-    s += buildCornerSVG(W - c, c, -1, 1, config.cornerSize, config.cornerColor);
-    s += buildCornerSVG(c, H - c, 1, -1, config.cornerSize, config.cornerColor);
-    s += buildCornerSVG(W - c, H - c, -1, -1, config.cornerSize, config.cornerColor);
-  }
-
-  if (config.newsBrackets) {
-    s += buildNewsBracketsSVG(W, H, config.bracketColor || '#1a1a1a', config.bracketThickness || 28);
-  }
-
-  // ✅ المحتوى (النص + الكتاب + المؤلف + العلامة المائية) بمعامل شفافية
-  const openG = op < 1 ? `<g opacity="${op.toFixed(3)}">` : '';
-  const closeG = op < 1 ? '</g>' : '';
-
-  s += openG;
-
-  if (showQuote) {
-    s += `<text x="90" y="230" font-family="Aref Ruqaa, Georgia, serif" font-weight="bold" font-size="220" fill="${config.quoteMarkColor}" text-anchor="start">&#8220;</text>`;
-  }
-
-  s += buildDividerSVG(cx, topDivider, config.topDividerWidth || 300, config.ornamentColor);
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (!line) continue;
-    const baselineY = startY + i * lineHeight + fontSize * 0.85;
-    const common = `font-family="${font}" font-weight="700" font-size="${fontSize}" text-anchor="middle" direction="rtl"`;
-    s += `<text x="${cx + 2}" y="${baselineY + 3}" ${common} fill="${textShadow}">${escapeXml(line)}</text>`;
-    s += `<text x="${cx - 1}" y="${baselineY - 1}" ${common} fill="${textHighlight}">${escapeXml(line)}</text>`;
-    s += `<text x="${cx}" y="${baselineY}" ${common} fill="${textColor}">${escapeXml(line)}</text>`;
-  }
-
-  s += buildDividerSVG(cx, bottomDivider, config.bottomDividerWidth || 240, config.ornamentColor);
-
-  if (showBook && bookName) {
-    const bookText = '\u{1F4D6} \uFD3F ' + bookName + ' \uFD3E';
-    s += `<text x="${cx}" y="${H - 200}" font-family="${FONT_FAMILY}" font-weight="700" font-size="36" fill="${config.bookColor}" text-anchor="middle" direction="rtl">${escapeXml(bookText)}</text>`;
-  }
-  if (showAuthor && authorName) {
-    const authorText = '\u270D ' + authorName;
-    s += `<text x="${cx}" y="${H - 150}" font-family="${FONT_FAMILY}" font-weight="400" font-style="italic" font-size="28" fill="${config.authorColor}" text-anchor="middle" direction="rtl">${escapeXml(authorText)}</text>`;
-  }
-
-  const wmPositions = [
-    { x: W * 0.25, y: H * 0.16 },
-    { x: W * 0.75, y: H * 0.34 },
-    { x: W * 0.28, y: H * 0.56 },
-    { x: W * 0.72, y: H * 0.76 },
-  ];
-  for (const p of wmPositions) {
-    s += `<text transform="translate(${p.x.toFixed(0)} ${p.y.toFixed(0)}) rotate(-22)" font-family="${FONT_FAMILY}" font-weight="700" font-size="34" fill="${config.watermarkColor}" opacity="0.12" text-anchor="middle" direction="rtl">تصميم / sab3-77</text>`;
-  }
-
-  s += closeG;
-  s += `</svg>`;
-  return s;
-}
-
-const STYLE_CONFIGS = {
-  naskh: {
-    bgColors: ['#0a1a30', '#0f2542', '#071224'],
-    vignette: ['rgba(70, 110, 170, 0.22)', 'rgba(0, 0, 0, 0.55)'],
-    frames: [
-      { color: '#c9a961', width: 5, inset: 38 },
-      { color: '#8a6d2f', width: 1.5, inset: 58 },
-      { color: 'rgba(201,169,97,0.5)', width: 1, inset: 66 },
-    ],
-    cornerColor: '#c9a961', cornerSize: 140, cornerInset: 66,
-    stars: true, starsColor: '#c9a961',
-    ornamentColor: '#c9a961', quoteMarkColor: '#f5e6b8',
-    bookColor: '#f5e6b8', authorColor: '#c9a961', watermarkColor: '#e8d5a8',
-    topDividerWidth: 320, bottomDividerWidth: 260,
-    variants: [
-      { font: FONT_FAMILY,  textColor: '#e8d5a8', textShadow: 'rgba(0,0,0,0.85)', textHighlight: 'rgba(255,245,200,0.85)' },
-      { font: FONT_FAMILY_B, textColor: '#f5e6b8', textShadow: 'rgba(0,0,0,0.9)',  textHighlight: 'rgba(255,250,220,0.9)' },
-      { font: FONT_FAMILY_C, textColor: '#d4b478', textShadow: 'rgba(0,0,0,0.85)', textHighlight: 'rgba(255,240,200,0.8)' },
-      { font: FONT_FAMILY,  textColor: '#f0e6d2', textShadow: 'rgba(0,0,0,0.9)',  textHighlight: 'rgba(255,255,240,0.85)' },
-    ],
-  },
-  oriental: {
-    bgColors: ['#14213d', '#1a2b4a', '#0d1b2f'],
-    vignette: ['rgba(60, 90, 150, 0.15)', 'rgba(0, 0, 0, 0.4)'],
-    frames: [
-      { color: 'rgba(201,169,97,0.9)', width: 3, inset: 50 },
-      { color: 'rgba(201,169,97,0.35)', width: 1, inset: 70 },
-    ],
-    cornerColor: 'rgba(201,169,97,0.85)', cornerSize: 130, cornerInset: 70,
-    khatimPattern: true, khatimColor: '#c9a961',
-    ornamentColor: '#c9a961', quoteMarkColor: 'rgba(201,169,97,0.9)',
-    bookColor: '#e8d5a8', authorColor: '#c9a961', watermarkColor: '#c9a961',
-    topDividerWidth: 320, bottomDividerWidth: 240,
-    variants: [
-      { font: FONT_FAMILY,  textColor: '#f5ecd9', textShadow: 'rgba(0,0,0,0.55)', textHighlight: 'rgba(255,255,255,0.35)' },
-      { font: FONT_FAMILY_B, textColor: '#e8d5a8', textShadow: 'rgba(0,0,0,0.7)',  textHighlight: 'rgba(255,240,200,0.55)' },
-      { font: FONT_FAMILY_C, textColor: '#f0e6d2', textShadow: 'rgba(0,0,0,0.55)', textHighlight: 'rgba(255,255,255,0.35)' },
-    ],
-  },
-  classic: {
-    bgColors: ['#f7efdd', '#f2e6cd', '#e9d8b5'],
-    vignette: ['rgba(255,248,232,0.45)', 'rgba(120,90,50,0.18)'],
-    frames: [
-      { color: '#b8945a', width: 4, inset: 40 },
-      { color: 'rgba(184,148,90,0.55)', width: 1, inset: 60 },
-    ],
-    cornerColor: '#b8945a', cornerSize: 120, cornerInset: 60,
-    ornamentColor: '#b8945a', quoteMarkColor: 'rgba(30, 58, 95, 0.85)',
-    bookColor: '#5c4a2f', authorColor: '#8a7a5f', watermarkColor: '#5a3a10',
-    topDividerWidth: 300, bottomDividerWidth: 240,
-    variants: [
-      { font: FONT_FAMILY,  textColor: '#2a1f14', textShadow: 'rgba(0,0,0,0.28)', textHighlight: 'rgba(255,240,200,0.75)' },
-      { font: FONT_FAMILY_B, textColor: '#1a2a45', textShadow: 'rgba(0,0,0,0.3)',  textHighlight: 'rgba(200,220,255,0.6)' },
-      { font: FONT_FAMILY_C, textColor: '#1e3a2a', textShadow: 'rgba(0,0,0,0.28)', textHighlight: 'rgba(220,255,220,0.6)' },
-    ],
-  },
-  modern: {
-    bgColors: ['#fefefe', '#ffffff', '#ffffff'],
-    vignette: ['rgba(255,255,255,0)', 'rgba(255,255,255,0)'],
-    frames: [],
-    cornerColor: null,
-    ornamentColor: '#0f172a', quoteMarkColor: '#0f172a',
-    bookColor: '#0f172a', authorColor: '#64748b', watermarkColor: '#0f172a',
-    topDividerWidth: 0, bottomDividerWidth: 0,
-    isModern: true,
-    variants: [
-      { font: '-apple-system, "SF Arabic", ' + FONT_FAMILY, textColor: '#0f172a', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.4)' },
-      { font: '-apple-system, "SF Arabic", ' + FONT_FAMILY, textColor: '#1e3a8a', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.4)' },
-      { font: FONT_FAMILY, textColor: '#4c1d95', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.4)' },
-      { font: FONT_FAMILY_B, textColor: '#064e3b', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.4)' },
-    ],
-  },
-  islamic: {
-    bgColors: ['#0a3d2e', '#0e5940', '#082818'],
-    vignette: ['rgba(212, 175, 55, 0.18)', 'rgba(0, 0, 0, 0.55)'],
-    frames: [
-      { color: '#d4af37', width: 5, inset: 40 },
-      { color: '#8a6d2f', width: 1.5, inset: 60 },
-      { color: 'rgba(212,175,55,0.4)', width: 1, inset: 70 },
-    ],
-    cornerColor: '#d4af37', cornerSize: 140, cornerInset: 70,
-    khatimPattern: true, khatimColor: '#d4af37',
-    ornamentColor: '#d4af37', quoteMarkColor: '#e8d5a8',
-    bookColor: '#e8d5a8', authorColor: '#d4af37', watermarkColor: '#d4af37',
-    topDividerWidth: 320, bottomDividerWidth: 260,
-    variants: [
-      { font: FONT_FAMILY,  textColor: '#f5ecd9', textShadow: 'rgba(0,0,0,0.75)', textHighlight: 'rgba(255,245,200,0.55)' },
-      { font: FONT_FAMILY_C, textColor: '#e8d5a8', textShadow: 'rgba(0,0,0,0.75)', textHighlight: 'rgba(255,240,200,0.55)' },
-      { font: FONT_FAMILY_B, textColor: '#f0e6d2', textShadow: 'rgba(0,0,0,0.8)',  textHighlight: 'rgba(255,245,200,0.6)' },
-    ],
-  },
-  night: {
-    bgColors: ['#000308', '#0a1224', '#000205'],
-    vignette: ['rgba(70, 100, 180, 0.18)', 'rgba(0, 0, 0, 0.75)'],
-    frames: [
-      { color: 'rgba(200, 215, 240, 0.4)', width: 2, inset: 50 },
-      { color: 'rgba(200, 215, 240, 0.15)', width: 1, inset: 65 },
-    ],
-    cornerColor: 'rgba(200, 215, 240, 0.55)', cornerSize: 110, cornerInset: 65,
-    starsLayer: true, starsCount: 140,
-    ornamentColor: 'rgba(200, 215, 240, 0.6)', quoteMarkColor: 'rgba(220, 230, 250, 0.75)',
-    bookColor: '#c8d2e6', authorColor: '#8899b8', watermarkColor: '#c8d2e6',
-    topDividerWidth: 280, bottomDividerWidth: 220,
-    variants: [
-      { font: FONT_FAMILY,  textColor: '#e8eef8', textShadow: 'rgba(0,0,0,0.95)', textHighlight: 'rgba(180,200,240,0.35)' },
-      { font: FONT_FAMILY_C, textColor: '#d8e0f0', textShadow: 'rgba(0,0,0,0.95)', textHighlight: 'rgba(180,200,240,0.35)' },
-      { font: FONT_FAMILY_B, textColor: '#f0f4fc', textShadow: 'rgba(0,0,0,0.95)', textHighlight: 'rgba(200,215,250,0.4)' },
-    ],
-  },
-  news: {
-    bgColors: ['#ffffff', '#fcfcfc', '#f5f5f5'],
-    vignette: ['rgba(255,255,255,0)', 'rgba(180, 180, 180, 0.12)'],
-    frames: [],
-    cornerColor: null,
-    newsBrackets: true,
-    bracketColor: '#1a1a1a',
-    bracketThickness: 28,
-    ornamentColor: '#1a1a1a', quoteMarkColor: '#1a1a1a',
-    bookColor: '#1a1a1a', authorColor: '#666666', watermarkColor: '#999999',
-    topDividerWidth: 240, bottomDividerWidth: 200,
-    isNews: true,
-    variants: [
-      { font: '-apple-system, "SF Arabic", ' + FONT_FAMILY, textColor: '#0a0a0a', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.5)' },
-      { font: FONT_FAMILY, textColor: '#0a0a0a', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.5)' },
-      { font: FONT_FAMILY_B, textColor: '#1a1a1a', textShadow: 'rgba(0,0,0,0.05)', textHighlight: 'rgba(255,255,255,0.5)' },
-    ],
-  },
-  emerald: {
-    bgColors: ['#0a3d2e', '#0f4a37', '#082818'],
-    vignette: ['rgba(150, 220, 180, 0.12)', 'rgba(0, 0, 0, 0.5)'],
-    frames: [
-      { color: '#a8c7b0', width: 4, inset: 45 },
-      { color: 'rgba(168, 199, 176, 0.4)', width: 1, inset: 65 },
-    ],
-    cornerColor: '#a8c7b0', cornerSize: 120, cornerInset: 65,
-    diamondPattern: true, diamondColor: '#a8c7b0',
-    ornamentColor: '#a8c7b0', quoteMarkColor: '#d4e8d8',
-    bookColor: '#d4e8d8', authorColor: '#a8c7b0', watermarkColor: '#a8c7b0',
-    topDividerWidth: 300, bottomDividerWidth: 240,
-    variants: [
-      { font: FONT_FAMILY,  textColor: '#f0f8f2', textShadow: 'rgba(0,0,0,0.7)', textHighlight: 'rgba(220,255,235,0.4)' },
-      { font: FONT_FAMILY_C, textColor: '#e0f0e4', textShadow: 'rgba(0,0,0,0.7)', textHighlight: 'rgba(220,255,235,0.4)' },
-      { font: FONT_FAMILY_B, textColor: '#f5fcf7', textShadow: 'rgba(0,0,0,0.75)', textHighlight: 'rgba(230,255,240,0.45)' },
-    ],
-  },
-};
-
-async function generateQuoteImage(rawText, bookName, authorName, style, forceVariantIdx) {
-  await ensureFonts();
-  const text = prepareQuoteText(rawText);
-  const W = 1080, H = 1920;
-  const config = STYLE_CONFIGS[style] || STYLE_CONFIGS.naskh;
-  const totalVariants = config.variants.length;
-
-  let variantIdx;
-  if (typeof forceVariantIdx === 'number') variantIdx = forceVariantIdx % totalVariants;
-  else if (typeof state.currentVariantIdx === 'number' && state.currentVariantIdx !== null) variantIdx = state.currentVariantIdx % totalVariants;
-  else variantIdx = nextVariant(totalVariants);
-  state.currentVariantIdx = variantIdx;
-  const variant = config.variants[variantIdx];
-
-  const layout = computeOptimalLayout(text, W, H, config, variant);
-  const fontSize = layout.fontSize;
-  const lines = layout.lines;
-  const lineHeight = layout.lineHeight;
-  const topDivider = layout.topDivider;
-  const bottomDivider = layout.bottomDivider;
-
-  const totalH = lines.length * lineHeight;
-  const centerY = (topDivider + bottomDivider) / 2;
-  let startY = centerY - totalH / 2;
-  if (startY < topDivider + 30) startY = topDivider + 30;
-  if (startY + totalH > bottomDivider - 30) startY = bottomDivider - 30 - totalH;
-
-  const cx = W / 2;
-  let svg;
-  if (config.isModern) {
-    svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
-    svg += `<rect width="${W}" height="${H}" fill="#fefefe"/>`;
-    svg += `<rect x="0" y="0" width="14" height="${H}" fill="#0f172a"/>`;
-    svg += `<rect x="14" y="0" width="6" height="${H}" fill="#2b6cb0"/>`;
-    if (state.showQuote) svg += `<text x="50" y="260" font-family="-apple-system, system-ui, sans-serif" font-weight="bold" font-size="280" fill="#0f172a" text-anchor="start">&#8220;</text>`;
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i]; if (!line) continue;
-      const y = startY + i * lineHeight + fontSize * 0.85;
-      svg += `<text x="${cx}" y="${y}" font-family="${variant.font}" font-weight="800" font-size="${fontSize}" fill="${variant.textColor}" text-anchor="middle" direction="rtl">${escapeXml(line)}</text>`;
-    }
-    const lineY = Math.min(startY + totalH + 80, H - 300);
-    svg += `<line x1="80" y1="${lineY}" x2="${W - 100}" y2="${lineY}" stroke="#0f172a" stroke-width="3"/>`;
-    svg += `<circle cx="${W - 100}" cy="${lineY}" r="8" fill="#2b6cb0"/>`;
-    if (state.showBook && bookName) svg += `<text x="${cx}" y="${lineY + 60}" font-family="-apple-system, ${FONT_FAMILY}" font-weight="700" font-size="32" fill="#0f172a" text-anchor="middle" direction="rtl">📖 ${escapeXml(bookName)}</text>`;
-    if (state.showAuthor && authorName) svg += `<text x="${cx}" y="${lineY + 110}" font-family="-apple-system, ${FONT_FAMILY}" font-size="26" fill="#64748b" text-anchor="middle" direction="rtl">✍ ${escapeXml(authorName)}</text>`;
-    const wm = [{x:W*0.25,y:H*0.18},{x:W*0.75,y:H*0.36},{x:W*0.28,y:H*0.58},{x:W*0.72,y:H*0.78}];
-    for (const p of wm) svg += `<text transform="translate(${p.x.toFixed(0)} ${p.y.toFixed(0)}) rotate(-22)" font-family="-apple-system, system-ui" font-weight="700" font-size="34" fill="#0f172a" opacity="0.07" text-anchor="middle">sab3-77</text>`;
-    svg += `</svg>`;
-  } else {
-    svg = buildQuoteSVG({ W, H, lines, fontSize, lineHeight, startY, topDivider, bottomDivider, bookName, authorName, config, variant, showQuote: state.showQuote, showBook: state.showBook, showAuthor: state.showAuthor });
-  }
-
-  const svgBlob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-  const svgUrl = URL.createObjectURL(svgBlob);
-  const img = new Image();
-  img.crossOrigin = 'anonymous';
-  await new Promise((resolve, reject) => {
-    img.onload = resolve;
-    img.onerror = () => { URL.revokeObjectURL(svgUrl); reject(new Error('فشل تحميل SVG')); };
-    img.src = svgUrl;
-  });
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, W, H);
-  ctx.drawImage(img, 0, 0, W, H);
-  URL.revokeObjectURL(svgUrl);
-  return new Promise(resolve => canvas.toBlob(b => resolve(b), 'image/png'));
-}
-
-function svgToImage(svg) {
-  return new Promise((resolve, reject) => {
-    const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve({ img, url });
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('SVG load fail')); };
-    img.src = url;
-  });
-}
-
-async function showQuoteImage(text, style) {
-  if (generateLock) return;
-  generateLock = true;
-  const myId = ++generateId;
-  document.querySelectorAll('.style-chip').forEach(c => c.disabled = true);
-  setStatus('جاري توليد الصورة...');
-  try {
-    state.currentImageText = text;
-    state.editedText = text;
-    state.editMode = false;
-    state.currentVariantIdx = null;
-    const useStyle = style || state.imageStyle;
-    const blob = await generateQuoteImage(state.editedText, state.pdfName, state.authorName, useStyle);
-    if (myId !== generateId) return;
-    state.currentImageBlob = blob;
-    const url = URL.createObjectURL(blob);
-    document.getElementById('previewImg').src = url;
-    document.getElementById('previewImg').classList.remove('hidden');
-    document.getElementById('editPanel').classList.add('hidden');
-    document.getElementById('editQuoteBtn').classList.remove('hidden');
-    document.getElementById('videoBtn').classList.remove('hidden');
-    document.getElementById('durationBtn').classList.remove('hidden');
-    document.getElementById('animationBtn').classList.remove('hidden');
-    document.getElementById('regenBtn').classList.add('hidden');
-    document.getElementById('imgPreview').classList.remove('hidden');
-    document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
-    document.querySelectorAll('.style-chip').forEach(c => c.classList.toggle('active', c.dataset.style === useStyle));
-    setStatus('تم توليد الصورة ✨', 'ok');
-  } catch (e) {
-    if (myId === generateId) { setStatus('فشل توليد الصورة', 'err'); toast('❌ ' + e.message); }
-  } finally {
-    generateLock = false;
-    document.querySelectorAll('.style-chip').forEach(c => c.disabled = false);
-  }
-}
-
-function enterEditMode() {
-  state.editMode = true;
-  state.editedText = state.editedText || state.currentImageText;
-  document.getElementById('editTextarea').value = state.editedText;
-  document.getElementById('previewImg').classList.add('hidden');
-  document.getElementById('editPanel').classList.remove('hidden');
-  document.getElementById('editQuoteBtn').classList.add('hidden');
-  document.getElementById('videoBtn').classList.add('hidden');
-  document.getElementById('durationBtn').classList.add('hidden');
-  document.getElementById('animationBtn').classList.add('hidden');
-  document.getElementById('regenBtn').classList.remove('hidden');
-  updateToggleUI();
-}
-
-function updateToggleUI() {
-  const q = document.getElementById('toggleQuoteBtn');
-  const b = document.getElementById('toggleBookBtn');
-  const a = document.getElementById('toggleAuthorBtn');
-  q.classList.toggle('on', state.showQuote); q.classList.toggle('off', !state.showQuote);
-  b.classList.toggle('on', state.showBook); b.classList.toggle('off', !state.showBook);
-  a.classList.toggle('on', state.showAuthor); a.classList.toggle('off', !state.showAuthor);
-  q.textContent = (state.showQuote ? '❝ ' : '🚫 ') + 'علامة';
-  b.textContent = (state.showBook ? '📖 ' : '🚫 ') + 'الكتاب';
-  a.textContent = (state.showAuthor ? '✍ ' : '🚫 ') + 'المؤلف';
-}
-
-async function regenerateCurrent() {
-  if (state.busy) return;
-  state.busy = true;
-  const newText = (document.getElementById('editTextarea').value || '').trim();
-  if (!newText) { toast('❌ النص فارغ'); state.busy = false; return; }
-  state.editedText = newText;
-  setStatus('جاري إعادة التوليد...');
-  const tQ = document.getElementById('toggleQuoteBtn');
-  const tB = document.getElementById('toggleBookBtn');
-  const tA = document.getElementById('toggleAuthorBtn');
-  const rB = document.getElementById('regenBtn');
-  tQ.disabled = true; tB.disabled = true; tA.disabled = true; rB.disabled = true;
-  rB.textContent = '⏳ جاري...';
-  try {
-    const blob = await generateQuoteImage(state.editedText, state.pdfName, state.authorName, state.imageStyle);
-    state.currentImageBlob = blob;
-    const url = URL.createObjectURL(blob);
-    document.getElementById('previewImg').src = url;
-    document.getElementById('previewImg').classList.remove('hidden');
-    document.getElementById('editPanel').classList.add('hidden');
-    document.getElementById('editQuoteBtn').classList.remove('hidden');
-    document.getElementById('videoBtn').classList.remove('hidden');
-    document.getElementById('durationBtn').classList.remove('hidden');
-    document.getElementById('animationBtn').classList.remove('hidden');
-    document.getElementById('regenBtn').classList.add('hidden');
-    document.getElementById('shareImgBtn').onclick = () => shareImage(blob);
-    state.editMode = false;
-    setStatus('تم التوليد ✨', 'ok');
-  } catch (e) { setStatus('فشل', 'err'); toast('❌ ' + e.message); }
-  finally {
-    tQ.disabled = false; tB.disabled = false; tA.disabled = false; rB.disabled = false;
-    rB.textContent = '🎨 توليد';
-    state.busy = false;
-  }
-}
-
-// ============== 🎬 توليد الفيديو ==============
-function updateVideoProgress(percent, statusText) {
-  document.getElementById('videoProgressBar').style.width = (percent * 100).toFixed(1) + '%';
-  document.getElementById('videoPercent').textContent = Math.round(percent * 100) + '%';
-  if (statusText) document.getElementById('videoStatus').textContent = statusText;
-}
-
-function pickBestMimeType() {
-  const candidates = [
-    'video/mp4;codecs=avc1.64001E',
-    'video/mp4;codecs=avc1.4D401E',
-    'video/mp4;codecs=avc1.42E01E',
-    'video/mp4;codecs=h264',
-    'video/mp4;codecs=avc1',
-    'video/mp4',
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-  ];
-  for (const c of candidates) {
-    try { if (MediaRecorder.isTypeSupported(c)) return c; } catch (e) {}
-  }
-  return 'video/webm';
-}
-
-function canPlayVideoType(mimeType) {
-  const v = document.createElement('video');
-  const result = v.canPlayType(mimeType);
-  return result === 'probably' || result === 'maybe';
-}
-
-// ✅ توليد الفيديو مع 3 أنواع حركات
-async function generateQuoteVideo(rawText, style) {
-  await ensureFonts();
-  const text = prepareQuoteText(rawText);
-  const W = 1080, H = 1920;
-  const config = STYLE_CONFIGS[style] || STYLE_CONFIGS.naskh;
-  const variant = config.variants[0];
-
-  const layout = computeOptimalLayout(text, W, H, config, variant);
-  const fontSize = layout.fontSize;
-  const rawLines = layout.lines.filter(l => l.trim()); // أسطر فارغة محذوفة
-  const lineHeight = layout.lineHeight;
-  const topDivider = layout.topDivider;
-  const bottomDivider = layout.bottomDivider;
-
-  const totalLines = rawLines.length;
-  const totalH = rawLines.length * lineHeight;
-  const centerY = (topDivider + bottomDivider) / 2;
-  let startY = centerY - totalH / 2;
-  if (startY < topDivider + 30) startY = topDivider + 30;
-  if (startY + totalH > bottomDivider - 30) startY = bottomDivider - 30 - totalH;
-
-  // احتفظ بالأسطر الأصلية (بما فيها الفارغة) لضمان تخطيط صحيح
-  const originalLines = layout.lines;
-
-  // جمع كل الكلمات
-  const wordSeq = [];
-  originalLines.forEach((line, li) => {
-    if (!line.trim()) return;
-    line.split(/\s+/).filter(w => w).forEach(w => wordSeq.push({ line: li, word: w }));
-  });
-  const totalWords = wordSeq.length;
-
-  // ✅ بناء السطور بجزء من الكلمات
-  function buildPartialLines(upToWords) {
-    const lineWords = new Array(originalLines.length).fill(null).map(() => []);
-    for (let i = 0; i < upToWords && i < totalWords; i++) {
-      const w = wordSeq[i];
-      lineWords[w.line].push(w.word);
-    }
-    return lineWords.map(arr => arr.join(' '));
-  }
-
-  // ✅ بناء السطور بجزء من الأسطر الكاملة
-  function buildPartialLinesByLine(upToLines) {
-    const result = new Array(originalLines.length).fill('');
-    let visibleCount = 0;
-    for (let i = 0; i < originalLines.length; i++) {
-      if (!originalLines[i].trim()) { result[i] = ''; continue; }
-      if (visibleCount < upToLines) {
-        result[i] = originalLines[i];
-      }
-      visibleCount++;
-    }
-    return result;
-  }
-
-  // ✅ توليد إطار SVG بناءً على نوع الحركة
-  function buildFrameSVG(frameState) {
-    if (frameState.mode === 'fade') {
-      return buildQuoteSVG({
-        W, H, lines: originalLines, fontSize, lineHeight, startY, topDivider, bottomDivider,
-        bookName: state.showBook ? state.pdfName : '',
-        authorName: state.showAuthor ? state.authorName : '',
-        config, variant,
-        showQuote: state.showQuote,
-        showBook: state.showBook,
-        showAuthor: state.showAuthor,
-        textOpacity: frameState.opacity,
-      });
-    }
-    // word/line
-    return buildQuoteSVG({
-      W, H, lines: frameState.lines, fontSize, lineHeight, startY, topDivider, bottomDivider,
-      bookName: state.showBook ? state.pdfName : '',
-      authorName: state.showAuthor ? state.authorName : '',
-      config, variant,
-      showQuote: state.showQuote,
-      showBook: state.showBook,
-      showAuthor: state.showAuthor,
-    });
-  }
-
-  // ✅ بناء قائمة الحالات بناءً على نوع الحركة
-  const frameStates = [];  // [{mode, ...}]
-
-  if (state.animationType === ANIM_WORD) {
-    const MAX_FRAMES = 40;
-    const step = Math.max(1, Math.ceil(totalWords / MAX_FRAMES));
-    const counts = [];
-    for (let i = 0; i <= totalWords; i += step) counts.push(i);
-    if (counts[counts.length - 1] !== totalWords) counts.push(totalWords);
-    for (const c of counts) frameStates.push({ mode: 'word', wordCount: c, lines: buildPartialLines(c) });
-  } else if (state.animationType === ANIM_LINE) {
-    const lineCount = originalLines.filter(l => l.trim()).length;
-    for (let i = 0; i <= lineCount; i++) {
-      frameStates.push({ mode: 'line', lineCount: i, lines: buildPartialLinesByLine(i) });
-    }
-  } else {
-    // fade: 30 حالة من 0 إلى 1
-    const STEPS = 30;
-    for (let i = 0; i <= STEPS; i++) {
-      frameStates.push({ mode: 'fade', opacity: i / STEPS });
-    }
-  }
-
-  // توليد الصور
-  const prerenderedImages = [];
-  const revokeUrls = [];
-  for (let i = 0; i < frameStates.length; i++) {
-    updateVideoProgress(0.05 + (i / frameStates.length) * 0.55, `رسم الإطارات... ${i + 1}/${frameStates.length}`);
-    const { img, url } = await svgToImage(buildFrameSVG(frameStates[i]));
-    revokeUrls.push(url);
-    prerenderedImages.push(img);
-    await new Promise(r => setTimeout(r, 8));
-  }
-
-  // آخر إطار كصورة ثابتة
-  const lastFrameCanvas = document.createElement('canvas');
-  lastFrameCanvas.width = W; lastFrameCanvas.height = H;
-  const lfc = lastFrameCanvas.getContext('2d');
-  lfc.fillStyle = '#ffffff';
-  lfc.fillRect(0, 0, W, H);
-  lfc.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
-  state.lastFrameDataUrl = lastFrameCanvas.toDataURL('image/png');
-
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, W, H);
-  ctx.drawImage(prerenderedImages[prerenderedImages.length - 1], 0, 0, W, H);
-
-  const FPS = 24;
-
-  // ✅ الثبات: 5 ثوانٍ للـ 10 ث وأكثر، مع ضمان حركة لا تقل عن 3 ثوانٍ
-  const totalMs = state.videoDuration * 1000;
-  const holdMs = Math.min(5000, totalMs - 3000);
-  const animMs = totalMs - holdMs;
-
-  const stream = canvas.captureStream(FPS);
-  const mimeType = pickBestMimeType();
-
-  let recorder;
-  try {
-    recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
-  } catch (e) {
-    revokeUrls.forEach(u => URL.revokeObjectURL(u));
-    throw new Error('تعذر بدء التسجيل: ' + e.message);
-  }
-
-  const chunks = [];
-  recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-
-  function drawFrameAt(elapsedMs) {
-    let frameIdx;
-    if (elapsedMs < animMs) {
-      const progress = elapsedMs / animMs;
-      frameIdx = Math.min(
-        prerenderedImages.length - 1,
-        Math.floor(progress * prerenderedImages.length)
-      );
-    } else {
-      frameIdx = prerenderedImages.length - 1;
-    }
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, W, H);
-    ctx.drawImage(prerenderedImages[frameIdx], 0, 0, W, H);
-  }
-
-  return new Promise((resolve, reject) => {
-    try {
-      recorder.start();
-      const startTime = performance.now();
-      let lastFrame = -1;
-      function tick() {
-        const elapsed = performance.now() - startTime;
-        if (elapsed >= totalMs) { try { recorder.stop(); } catch (e) { reject(e); } return; }
-        const currentFrame = Math.floor((elapsed / 1000) * FPS);
-        if (currentFrame !== lastFrame) { lastFrame = currentFrame; drawFrameAt(elapsed); }
-        updateVideoProgress(0.6 + (elapsed / totalMs) * 0.4, `التسجيل... ${((elapsed/totalMs)*100).toFixed(0)}%`);
-        requestAnimationFrame(tick);
-      }
-      recorder.onstop = () => {
-        try {
-          const blob = new Blob(chunks, { type: mimeType });
-          revokeUrls.forEach(u => URL.revokeObjectURL(u));
-          resolve({ blob, mimeType });
-        } catch (e) { reject(e); }
-      };
-      recorder.onerror = () => reject(new Error('فشل التسجيل'));
-      tick();
-    } catch (e) {
-      revokeUrls.forEach(u => URL.revokeObjectURL(u));
-      reject(e);
-    }
-  });
-}
-
-async function shareVideoFile(blob, mimeType) {
-  const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-  const file = new File([blob], 'quote.' + ext, { type: mimeType });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file], title: 'اقتباس' }); return true; }
-    catch (e) { if (e.name === 'AbortError') return true; return false; }
-  }
-  return false;
-}
-
-function downloadVideoFile(blob, mimeType) {
-  const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'quote-' + Date.now() + '.' + ext;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-}
-
-async function handleVideoGeneration() {
-  if (videoLock) return;
-  videoLock = true;
-
-  if (typeof MediaRecorder === 'undefined' || !HTMLCanvasElement.prototype.captureStream) {
-    videoLock = false;
-    toast('❌ المتصفح لا يدعم توليد الفيديو');
-    return;
-  }
-
-  const totalMs = state.videoDuration * 1000;
-  const holdMs = Math.min(5000, totalMs - 3000);
-  const animMs = totalMs - holdMs;
-
-  const infoEl = document.getElementById('videoDurationInfo');
-  if (infoEl) {
-    infoEl.innerHTML =
-      '⏱️ المدة: ' + state.videoDuration + ' ث ' +
-      '(<b>' + (animMs/1000).toFixed(1) + ' ث حركة</b> + ' +
-      (holdMs/1000).toFixed(1) + ' ث ثبات)<br>' +
-      '🎬 الحركة: ' + ANIMATION_NAMES[state.animationType];
-  }
-
-  document.getElementById('videoOverlay').classList.remove('hidden');
-  updateVideoProgress(0, 'جاري التحضير...');
-
-  try {
-    const { blob, mimeType } = await generateQuoteVideo(state.editedText || state.currentImageText, state.imageStyle);
-    state.currentVideoBlob = blob;
-    state.currentVideoMime = mimeType;
-
-    document.getElementById('videoOverlay').classList.add('hidden');
-
-    if (state.currentVideoUrl) URL.revokeObjectURL(state.currentVideoUrl);
-    state.currentVideoUrl = URL.createObjectURL(blob);
-
-    const playable = canPlayVideoType(mimeType);
-    const isMp4 = mimeType.includes('mp4');
-
-    const videoEl = document.getElementById('videoPlayer');
-    const fallbackImg = document.getElementById('videoFallback');
-    const formatBadge = document.getElementById('formatBadge');
-    const hint = document.getElementById('videoHint');
-
-    if (playable) {
-      videoEl.src = state.currentVideoUrl;
-      videoEl.style.display = 'block';
-      fallbackImg.style.display = 'none';
-      formatBadge.textContent = '✅ ' + (isMp4 ? 'MP4' : 'WebM') + ' — ' + state.videoDuration + ' ث (' + ANIMATION_NAMES[state.animationType] + ')';
-      formatBadge.className = 'format-badge ok';
-      hint.innerHTML = isMp4
-        ? '💡 <b>لحفظ الفيديو في تطبيق الصور:</b><br>اضغط "📤 مشاركة" ثم اختر <b>"حفظ الفيديو"</b> من قائمة iOS.'
-        : '💡 <b>للمشاركة:</b> اضغط "📤 مشاركة" لإرساله على WhatsApp/Telegram.<br>⚠️ لحفظه في الصور، استخدم CapCut.';
-    } else {
-      videoEl.style.display = 'none';
-      fallbackImg.src = state.lastFrameDataUrl;
-      fallbackImg.style.display = 'block';
-      formatBadge.textContent = '⚠️ ' + (isMp4 ? 'MP4' : 'WebM') + ' — ' + state.videoDuration + ' ث';
-      formatBadge.className = 'format-badge warn';
-      hint.innerHTML = '💡 <b>الفيديو جاهز لكن Safari لا يمكنه معاينته.</b><br>' +
-        '• للمشاركة المباشرة: اضغط "📤 مشاركة".<br>' +
-        '• للحفظ في الصور: اضغط "💾 حفظ في الملفات" ثم افتحه في <b>CapCut</b>.';
-    }
-
-    document.getElementById('videoPreview').classList.remove('hidden');
-
-    document.getElementById('shareVideoBtn').onclick = async () => {
-      toast('📤 جاري فتح قائمة المشاركة...', 1500);
-      const ok = await shareVideoFile(blob, mimeType);
-      if (!ok) toast('❌ تعذر — استخدم "حفظ في الملفات"', 2500);
-    };
-    document.getElementById('downloadVideoBtn').onclick = () => {
-      downloadVideoFile(blob, mimeType);
-      toast('✅ تم حفظ الفيديو في الملفات', 1800);
-    };
-    document.getElementById('closeVideoBtn').onclick = closeVideoPreview;
-
-  } catch (e) {
-    document.getElementById('videoOverlay').classList.add('hidden');
-    toast('❌ فشل توليد الفيديو: ' + e.message, 3000);
-  } finally {
-    videoLock = false;
-  }
-}
-
-function closeVideoPreview() {
-  const videoEl = document.getElementById('videoPlayer');
-  try { videoEl.pause(); } catch (e) {}
-  videoEl.src = '';
-  if (state.currentVideoUrl) {
-    URL.revokeObjectURL(state.currentVideoUrl);
-    state.currentVideoUrl = '';
-  }
-  document.getElementById('videoPreview').classList.add('hidden');
-}
-
-function closePreview() { document.getElementById('imgPreview').classList.add('hidden'); }
-
-async function shareImage(blob) {
-  const file = new File([blob], 'quote.png', { type: 'image/png' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); }
-    catch (e) { if (e.name !== 'AbortError') toast('تعذرت المشاركة'); }
-  } else {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'quote.png'; a.click();
-    toast('تم تحميل الصورة');
-  }
-}
-
-function findQuote(text, book) { return state.library.find(q => q.text === text && q.book === book); }
-function isFavorite(text, book) { const q = findQuote(text, book); return !!(q && q.favorite); }
-function ensureInLibrary(text, book) {
-  let q = findQuote(text, book);
-  if (!q) {
-    q = { id: (crypto && crypto.randomUUID) ? crypto.randomUUID() : String(Date.now() + Math.random()), text, book, favorite: false, date: new Date().toISOString() };
-    state.library.push(q); saveLibrary();
-  }
-  return q;
-}
-function toggleFavorite(text, book) { const q = ensureInLibrary(text, book); q.favorite = !q.favorite; saveLibrary(); }
-function openLibrary() { document.getElementById('library').classList.remove('hidden'); renderLibrary('all'); }
-function closeLibrary() { document.getElementById('library').classList.add('hidden'); }
-
-function renderLibrary(filter) {
-  const list = document.getElementById('libList'); list.innerHTML = '';
-  let items = filter === 'fav' ? state.library.filter(q => q.favorite) : [...state.library];
-  items.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  document.getElementById('libCount').textContent = items.length + ' اقتباس';
-  document.getElementById('filterAll').className = 'btn ' + (filter === 'all' ? 'btn-purple' : 'btn-gray');
-  document.getElementById('filterFav').className = 'btn ' + (filter === 'fav' ? 'btn-purple' : 'btn-gray');
-  if (!items.length) { list.innerHTML = '<div style="text-align:center;color:#a0aec0;padding:30px;">لا توجد اقتباسات بعد</div>'; return; }
-  items.forEach(q => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const dateStr = (q.date || '').substring(0, 10);
-    card.innerHTML = `
-      <div class="card-head">
-        <button class="star ${q.favorite ? 'on' : ''}">${q.favorite ? '★' : '☆'}</button>
-        <span style="font-size:11px;color:#4a5568;">📕 ${escapeHtml(q.book || '')} · ${dateStr}</span>
-      </div>
-      <div class="q-text">${escapeHtml(q.text)}</div>
-      <div class="card-actions">
-        <button class="btn btn-green" data-act="copy">📋</button>
-        <button class="btn btn-blue" data-act="share">📤</button>
-        <button class="btn btn-purple" data-act="image">📸</button>
-        <button class="btn btn-red" data-act="del">🗑</button>
-      </div>`;
-    card.querySelector('.star').addEventListener('click', () => { q.favorite = !q.favorite; saveLibrary(); renderLibrary(filter); });
-    card.querySelector('[data-act="copy"]').addEventListener('click', () => copyQuote(q.text));
-    card.querySelector('[data-act="share"]').addEventListener('click', () => shareQuote(q.text));
-    card.querySelector('[data-act="image"]').addEventListener('click', () => showQuoteImage(q.text));
-    card.querySelector('[data-act="del"]').addEventListener('click', () => {
-      if (confirm('حذف؟')) { state.library = state.library.filter(x => x.id !== q.id); saveLibrary(); renderLibrary(filter); }
-    });
-    list.appendChild(card);
-  });
-}
-
-function renderQuotes() {
-  const container = document.getElementById('quotes');
-  container.innerHTML = '';
-  if (!state.quotes.length) return;
-  const header = document.createElement('div');
-  header.style.cssText = 'font-size:13px;color:#4a5568;text-align:right;padding:8px;margin-bottom:8px;line-height:1.7;';
-  header.textContent = state.currentHeader;
-  container.appendChild(header);
-  state.quotes.forEach((quote, i) => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    const isFav = isFavorite(quote, state.pdfName);
-    card.innerHTML = `
-      <div class="card-head">
-        <button class="star ${isFav ? 'on' : ''}" data-idx="${i}">${isFav ? '★' : '☆'}</button>
-        <span class="q-num">❝ اقتباس ${i + 1}</span>
-      </div>
-      <div class="q-text">${escapeHtml(quote)}</div>
-      <div class="card-actions">
-        <button class="btn btn-green" data-action="copy" data-idx="${i}">📋 نسخ</button>
-        <button class="btn btn-blue" data-action="share" data-idx="${i}">📤 مشاركة</button>
-        <button class="btn btn-purple" data-action="image" data-idx="${i}">📸 صورة</button>
-      </div>`;
-    container.appendChild(card);
-  });
-  container.querySelectorAll('.star').forEach(b => b.addEventListener('click', () => {
-    toggleFavorite(state.quotes[parseInt(b.dataset.idx)], state.pdfName); renderQuotes();
-  }));
-  container.querySelectorAll('[data-action]').forEach(b => b.addEventListener('click', () => {
-    const idx = parseInt(b.dataset.idx);
-    const t = state.quotes[idx];
-    if (b.dataset.action === 'copy') copyQuote(t);
-    else if (b.dataset.action === 'share') shareQuote(t);
-    else showQuoteImage(t);
-  }));
-}
-
-function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-async function copyQuote(text) { try { await navigator.clipboard.writeText(text); toast('✅ تم النسخ'); } catch (e) { toast('❌ فشل النسخ'); } }
-async function shareQuote(text) {
-  if (navigator.share) { try { await navigator.share({ text }); } catch (e) { if (e.name !== 'AbortError') copyQuote(text); } }
-  else copyQuote(text);
-}
-
-async function generate() {
-  if (state.busy) return;
-  const apiKey = document.getElementById('apiKey').value.trim();
-  if (!apiKey) { toast('❌ أدخل مفتاح OpenRouter'); return; }
-  if (!state.pdfFile) { toast('❌ اختر PDF أولاً'); return; }
-  saveApiKey(apiKey);
-  state.busy = true;
-  const genBtn = document.getElementById('genBtn');
-  genBtn.disabled = true; genBtn.textContent = '⏳ جاري الاستخراج...';
-  try {
-    setStatus('جاري قراءة PDF...'); showProgress(true, 0);
-    const { text } = await extractPdfText(state.pdfFile);
-    let cleaned = truncateAtLine(cleanPdfText(text), 12000);
-    if (!cleaned.trim()) { setStatus('لم يُعثر على نص', 'err'); return; }
-    setStatus('جاري الاتصال بالنموذج...');
-    const { text: answer, model } = await callOpenRouter(apiKey, state.pdfName, cleaned, state.quoteCount);
-    const quotes = parseQuotes(answer);
-    state.quotes = quotes;
-    state.currentHeader = '📕 ' + state.pdfName + '\n🤖 ' + model.split('/').pop();
-    quotes.forEach(q => ensureInLibrary(q, state.pdfName));
-    renderQuotes();
-    setStatus(`✓ ${quotes.length} اقتباسات — اضغط مجدداً`, 'ok');
-    genBtn.textContent = '🔄 اقتباسات جديدة';
-  } catch (e) {
-    setStatus('حدث خطأ', 'err');
-    document.getElementById('quotes').innerHTML = '<div class="card" style="color:#c53030;text-align:center;padding:20px;">حدث خطأ:<br><br>' + escapeHtml(e.message) + '</div>';
-  } finally {
-    state.busy = false; genBtn.disabled = false; showProgress(false);
-  }
-}
-
-function initApp() {
-  try {
-    loadLibrary(); loadApiKey();
-    ensureFonts().catch(() => {});
-
-    document.getElementById('pickPdfBtn').addEventListener('click', () => document.getElementById('pdfInput').click());
-    document.getElementById('pdfInput').addEventListener('change', (e) => {
-      const f = e.target.files[0]; if (!f) return;
-      state.pdfFile = f; state.pdfName = f.name;
-      if (!document.getElementById('bookName').value) {
-        document.getElementById('bookName').value = f.name.replace(/\.pdf$/i, '');
-        state.pdfName = f.name.replace(/\.pdf$/i, '');
-      }
-      setStatus('✓ ' + f.name, 'ok');
-      state.quotes = []; document.getElementById('quotes').innerHTML = '';
-    });
-    document.getElementById('genBtn').addEventListener('click', generate);
-
-    document.getElementById('countBtn').addEventListener('click', function() {
-      const opts = [3, 5, 7, 10];
-      let idx = opts.indexOf(state.quoteCount);
-      idx = (idx + 1) % opts.length;
-      state.quoteCount = opts[idx];
-      this.textContent = '🔢 ' + state.quoteCount;
-    });
-
-    document.getElementById('styleBtn').addEventListener('click', function() {
-      let i = STYLE_ORDER.indexOf(state.imageStyle);
-      i = (i + 1) % STYLE_ORDER.length;
-      state.imageStyle = STYLE_ORDER[i];
-      saveStyle(state.imageStyle);
-      this.textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
-      toast('النمط: ' + STYLE_NAMES[state.imageStyle]);
-    });
-
-    document.getElementById('libBtn').addEventListener('click', openLibrary);
-    document.getElementById('filterAll').addEventListener('click', () => renderLibrary('all'));
-    document.getElementById('filterFav').addEventListener('click', () => renderLibrary('fav'));
-
-    document.getElementById('bookName').addEventListener('input', e => state.pdfName = e.target.value || 'كتاب');
-    document.getElementById('authorName').addEventListener('input', e => { state.authorName = e.target.value; saveAuthor(e.target.value); });
-
-    document.querySelectorAll('.style-chip').forEach(chip => {
-      chip.addEventListener('click', async () => {
-        if (generateLock) return;
-        state.imageStyle = chip.dataset.style;
-        saveStyle(state.imageStyle);
-        state.currentVariantIdx = null;
-        document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
-        await showQuoteImage(state.editedText || state.currentImageText, state.imageStyle);
-      });
-    });
-
-    document.getElementById('editQuoteBtn').addEventListener('click', enterEditMode);
-    document.getElementById('regenBtn').addEventListener('click', regenerateCurrent);
-    document.getElementById('videoBtn').addEventListener('click', handleVideoGeneration);
-
-    document.getElementById('durationBtn').addEventListener('click', function() {
-      let idx = DURATION_OPTIONS.indexOf(state.videoDuration);
-      idx = (idx + 1) % DURATION_OPTIONS.length;
-      state.videoDuration = DURATION_OPTIONS[idx];
-      saveDuration(state.videoDuration);
-      updateDurationButton();
-      toast('⏱️ المدة: ' + state.videoDuration + ' ثوانٍ', 1200);
-    });
-
-    // ✅ زر الحركة
-    document.getElementById('animationBtn').addEventListener('click', function() {
-      let idx = ANIMATION_OPTIONS.indexOf(state.animationType);
-      idx = (idx + 1) % ANIMATION_OPTIONS.length;
-      state.animationType = ANIMATION_OPTIONS[idx];
-      saveAnimation(state.animationType);
-      updateAnimationButton();
-      toast('🎬 الحركة: ' + ANIMATION_NAMES[state.animationType], 1400);
-    });
-
-    document.getElementById('toggleQuoteBtn').addEventListener('click', async () => {
-      state.showQuote = !state.showQuote;
-      updateToggleUI();
-      toast(state.showQuote ? '❝ إظهار علامة الاقتباس' : '🚫 إخفاء علامة الاقتباس', 1200);
-      await regenerateCurrent();
-    });
-    document.getElementById('toggleBookBtn').addEventListener('click', async () => {
-      state.showBook = !state.showBook;
-      updateToggleUI();
-      toast(state.showBook ? '📖 إظهار اسم الكتاب' : '🚫 إخفاء اسم الكتاب', 1200);
-      await regenerateCurrent();
-    });
-    document.getElementById('toggleAuthorBtn').addEventListener('click', async () => {
-      state.showAuthor = !state.showAuthor;
-      updateToggleUI();
-      toast(state.showAuthor ? '✍ إظهار المؤلف' : '🚫 إخفاء المؤلف', 1200);
-      await regenerateCurrent();
-    });
-
-    updateToggleUI();
-    updateDurationButton();
-    updateAnimationButton();
-  } catch (e) {
-    showErr('init: ' + e.message);
-  }
-}
-
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp);
-} else {
-  initApp();
-}
-</script>
-</body>
-</html>
+    _measure
