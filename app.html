@@ -331,7 +331,7 @@ function updateAnimationButton() {
   if (btn) btn.textContent = ANIMATION_LABELS[state.animationType] || '✍️ كلمة';
 }
 
-// ✅ استخراج نص PDF مع فحص ذكي وتجاوز الصفحات الفارغة
+// ✅ استخراج نص PDF — نسخة مبسطة تعمل مع جميع الملفات
 async function extractPdfText(file) {
   if (!pdfjsReady) throw new Error('pdf.js لم يُحمّل');
   
@@ -341,88 +341,55 @@ async function extractPdfText(file) {
   const totalPages = pdf.numPages;
   if (totalPages === 0) throw new Error('PDF فارغ');
 
-  // ============ المرحلة 1: فحص سريع ============
-  setStatus('فحص الملف...');
-  const probeIdx = [1, Math.floor(totalPages/4), Math.floor(totalPages/2), Math.floor(3*totalPages/4), totalPages]
-    .filter((v, i, a) => v >= 1 && v <= totalPages && a.indexOf(v) === i);
-  
-  showProgress(true, 3);
-  let anyText = false;
-  for (const p of probeIdx) {
-    try {
-      const page = await pdf.getPage(p);
-      const c = await page.getTextContent();
-      const t = c.items.map(x => x.str).join(' ').trim();
-      if (t.length > 50) { anyText = true; break; }
-    } catch (e) {}
-  }
-  
-  // إذا لم نجد نصًا في الفحص الأولي، موسّع
-  if (!anyText) {
-    for (let i = 1; i <= Math.min(20, totalPages); i++) {
-      try {
-        const page = await pdf.getPage(i);
-        const c = await page.getTextContent();
-        const t = c.items.map(x => x.str).join(' ').trim();
-        if (t.length > 50) { anyText = true; break; }
-      } catch (e) {}
-    }
-  }
-  
-  if (!anyText) {
-    showProgress(false);
-    throw new Error('هذا الـ PDF لا يحتوي على نص قابل للاستخراج.\n\n'
-      + 'السبب المحتمل:\n'
-      + '• الملف صور ممسوحة ضوئيًا (Scanned PDF)\n'
-      + '• الملف محمي بكلمة مرور\n'
-      + '• الملف لا يحتوي على نص حقيقي\n\n'
-      + 'الحل: جرّب ملف PDF آخر، أو استخدم تطبيق OCR لتحويله أولاً.');
-  }
-
-  // ============ المرحلة 2: اختيار صفحات ذات نص ============
-  setStatus('جمع الصفحات ذات النص...');
   const TARGET = 30;
   let start = 1;
   if (totalPages > TARGET) {
     start = Math.floor(Math.random() * (totalPages - TARGET)) + 1;
   }
 
+  // ترتيب الصفحات: نبدأ من صفحة عشوائية، ثم نعود للبداية
+  const order = [];
+  for (let i = start; i <= totalPages; i++) order.push(i);
+  for (let i = 1; i < start; i++) order.push(i);
+
   const collected = [];
-  const visited = new Set();
-  let cursor = start;
-  let loopGuard = 0;
-  const maxIterations = totalPages * 2 + 10;
-  
-  while (collected.length < TARGET && loopGuard < maxIterations) {
-    if (cursor > totalPages) cursor = 1;
-    if (visited.has(cursor)) { cursor++; loopGuard++; continue; }
-    visited.add(cursor);
-    
+  let scannedPages = 0;
+
+  for (let i = 0; i < order.length; i++) {
+    if (collected.length >= TARGET) break;
+    const p = order[i];
+    scannedPages++;
     try {
-      const page = await pdf.getPage(cursor);
+      const page = await pdf.getPage(p);
       const c = await page.getTextContent();
-      const t = c.items.map(x => x.str).join(' ').trim();
-      if (t.length > 30) {
-        collected.push({ page: cursor, text: t });
+      const raw = c.items.map(x => x.str || '').join(' ');
+      const t = raw.replace(/\s+/g, ' ').trim();
+      // ✅ معيار أوسع: أي نص غير فارغ
+      if (t.length > 3) {
+        collected.push({ page: p, text: t });
       }
     } catch (e) {}
-    
     showProgress(true, 5 + (collected.length / TARGET) * 90);
-    cursor++;
-    loopGuard++;
   }
 
   if (collected.length === 0) {
     showProgress(false);
-    throw new Error('لم نعثر على نص في أي صفحة من صفحات PDF.');
+    throw new Error(
+      'هذا الـ PDF لا يحتوي على نص قابل للاستخراج.\n\n'
+      + 'عدد الصفحات: ' + totalPages + '\n'
+      + 'الصفحات المفحوصة: ' + scannedPages + '\n\n'
+      + 'السبب المحتمل:\n'
+      + '• الملف صور ممسوحة ضوئيًا (Scanned PDF)\n'
+      + '• الملف محمي بكلمة مرور\n'
+      + '• الملف لا يحتوي على نص حقيقي'
+    );
   }
-
-  // رتّب حسب رقم الصفحة
+  
   collected.sort((a, b) => a.page - b.page);
-  const text = collected.map(x => `[صفحة ${x.page}]\n${x.text}`).join('\n\n');
+  const text = collected.map(x => '[صفحة ' + x.page + ']\n' + x.text).join('\n\n');
   
   showProgress(false);
-  return { text, totalPages, collectedPages: collected.length };
+  return { text, totalPages, collectedPages: collected.length, scannedPages };
 }
 
 function cleanPdfText(text) {
