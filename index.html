@@ -340,7 +340,7 @@ async function extractPdfText(file){
   const arrayBuffer=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
   const totalPages=pdf.numPages;
-  const MAX=30;
+  const MAX=15; // تم تقليل عدد الصفحات لتفادي حظر السيرفر بسبب حجم النص
   let start=1;
   if(totalPages>MAX)start=Math.floor(Math.random()*(totalPages-MAX))+1;
   const end=Math.min(start+MAX-1,totalPages);
@@ -412,7 +412,12 @@ function prepareQuoteText(text){
   return t;
 }
 
-const MODELS=['google/gemini-2.5-flash', 'google/gemini-flash-1.5', 'meta-llama/llama-3-70b-instruct'];
+// استخدام نماذج مجانية ومستقرة لتفادي أي مشاكل في الرصيد أو التوجيه
+const MODELS=[
+  'google/gemini-2.0-flash-exp:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemini-2.5-flash'
+];
 
 async function callOpenRouter(apiKey,bookName,bookText,count){
   const seed=Math.floor(Math.random()*9000)+1000;
@@ -450,8 +455,18 @@ ${bookText}`;
     try{
       const res=await fetch('[https://openrouter.ai/api/v1/chat/completions](https://openrouter.ai/api/v1/chat/completions)',{
         method:'POST',
-        headers:{'Authorization':'Bearer '+apiKey,'Content-Type':'application/json'},
-        body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.85,max_tokens:4000})
+        headers:{
+          'Authorization':'Bearer '+apiKey,
+          'Content-Type':'application/json',
+          'HTTP-Referer': window.location.href || '[https://qarna68.github.io/](https://qarna68.github.io/)',
+          'X-Title': 'Arabic Quotes Extractor'
+        },
+        body:JSON.stringify({
+          model: model,
+          messages:[{role:'user',content:prompt}],
+          temperature:0.7,
+          max_tokens:2500
+        })
       });
       if(res.status===200){
         const data=await res.json();
@@ -1056,7 +1071,7 @@ function processImageFile(file,maxSize=1600){
 async function shareToTwitter(blob,mimeType){
   const isVideo=mimeType.startsWith('video/');
   const ext=isVideo?(mimeType.includes('mp4')?'mp4':'webm'):'png';
-  const filename='quote-'+Date.now()+'.ext';
+  const filename='quote-'+Date.now()+'.'+ext;
   const file=new File([blob],filename,{type:mimeType});
   if(navigator.canShare&&navigator.canShare({files:[file]})){
     try{
@@ -1578,7 +1593,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const btn = document.getElementById('genBtn');
     btn.disabled = true;
-    btn.textContent = '⏳ جاري الاستخراج بالذكاء الاصطناعي...';
+    btn.textContent = '⏳ جاري الاستخراج...';
     setStatus('يتم الآن استخراج الاقتباسات (قد يستغرق بعض الوقت)...');
 
     try {
