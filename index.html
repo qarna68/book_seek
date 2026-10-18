@@ -297,7 +297,6 @@ function loadApiKey(){
     if(an&&ANIMATION_OPTIONS.includes(an))state.animationType=an;
     const or=localStorage.getItem(ORIENTATION_STORAGE);
     if(or==='portrait'||or==='landscape')state.orientation=or;
-    // خلفية مخصصة محفوظة
     const bg=localStorage.getItem(CUSTOM_BG_STORAGE);
     if(bg&&bg.startsWith('data:image'))state.customBg=bg;
     const wm=localStorage.getItem(WATERMARK_STORAGE);
@@ -449,7 +448,7 @@ ${bookText}`;
   for(const model of MODELS){
     setStatus(`(${model.split('/').pop()}) جاري الاتصال...`);
     try{
-      const res=await fetch('https://openrouter.ai/api/v1/chat/completions',{
+      const res=await fetch('[https://openrouter.ai/api/v1/chat/completions](https://openrouter.ai/api/v1/chat/completions)',{
         method:'POST',
         headers:{'Authorization':'Bearer '+apiKey,'Content-Type':'application/json','HTTP-Referer':location.origin,'X-Title':'Arabic Quotes Extractor'},
         body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.85,max_tokens:4000})
@@ -469,10 +468,16 @@ ${bookText}`;
 }
 
 function escapeXml(s){return String(s).replace(/[<>&'"]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;',"'":'&apos;','"':'&quot;'}[c]))}
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>'"]/g, match => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  }[match] || match));
+}
 
 let _measureSvg=null,_measureText=null;
 function measureSvgTextWidth(text,fontSize,fontWeight,fontFamily){
-  const svgNS='http://www.w3.org/2000/svg';
+  const svgNS='[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)';
   if(!_measureSvg){
     _measureSvg=document.createElementNS(svgNS,'svg');
     _measureSvg.setAttribute('xmlns',svgNS);
@@ -651,7 +656,7 @@ function buildQuoteSVG(opts){
   const {W,H,lines,fontSize,lineHeight,startY,topDivider,bottomDivider,bookName,authorName,config,variant,showQuote,showBook,showAuthor,textOpacity}=opts;
   const isPortrait=H>W;
   const op=(typeof textOpacity==='number')?textOpacity:1;
-  const NS='xmlns="http://www.w3.org/2000/svg"';
+  const NS='xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"';
   const font=variant.font;
   const cx=W/2;
   const useCustomBg=!!state.customBg;
@@ -960,7 +965,7 @@ async function generateQuoteImage(rawText,bookName,authorName,style,forceVariant
   const showWM=state.showWatermark;
   let svg;
   if(config.isModern){
-    svg=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
+    svg=`<svg xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">`;
     if(useCustomBg){
       svg+=`<image href="${state.customBg}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="xMidYMid slice"/>`;
       svg+=`<rect width="${W}" height="${H}" fill="rgba(0,0,0,0.38)"/>`;
@@ -1053,7 +1058,6 @@ async function shareToTwitter(blob,mimeType){
   const ext=isVideo?(mimeType.includes('mp4')?'mp4':'webm'):'png';
   const filename='quote-'+Date.now()+'.'+ext;
   const file=new File([blob],filename,{type:mimeType});
-  // Mobile: native share sheet (بدون نص)
   if(navigator.canShare&&navigator.canShare({files:[file]})){
     try{
       await navigator.share({files:[file]});
@@ -1062,13 +1066,12 @@ async function shareToTwitter(blob,mimeType){
       if(e.name==='AbortError')return;
     }
   }
-  // Desktop: download + open twitter
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();document.body.removeChild(a);
   setTimeout(()=>URL.revokeObjectURL(url),2000);
-  setTimeout(()=>{window.open('https://twitter.com/intent/tweet','_blank')},800);
+  setTimeout(()=>{window.open('[https://twitter.com/intent/tweet','_blank](https://twitter.com/intent/tweet','_blank)')},800);
   toast('📥 تم تحميل الملف — اسحبه إلى نافذة تويتر',4000);
 }
 
@@ -1495,4 +1498,191 @@ function renderLibrary(filter){
     card.innerHTML=`
       <div class="card-head">
         <button class="star ${q.favorite?'on':''}">${q.favorite?'★':'☆'}</button>
-        <span style="font-size:11px;color:#4a5568;">📕 ${escapeHtml(q
+        <span style="font-size:11px;color:#4a5568;">📕 ${escapeHtml(q.book || 'بدون اسم')} - ${dateStr}</span>
+      </div>
+      <div class="q-text">${escapeHtml(q.text)}</div>
+      <div class="card-actions">
+        <button class="btn btn-blue action-design">🎨 تصميم</button>
+        <button class="btn btn-gray action-copy">📋 نسخ</button>
+        <button class="btn btn-red action-del">🗑️ حذف</button>
+      </div>
+    `;
+    
+    card.querySelector('.star').onclick = () => { toggleFavorite(q.text, q.book); renderLibrary(filter); };
+    card.querySelector('.action-design').onclick = () => { showQuoteImage(q.text, state.imageStyle); closeLibrary(); };
+    card.querySelector('.action-copy').onclick = () => { 
+        navigator.clipboard.writeText(q.text); 
+        toast('✅ تم نسخ الاقتباس للحافظة'); 
+    };
+    card.querySelector('.action-del').onclick = () => {
+        if(confirm('هل أنت متأكد من حذف هذا الاقتباس من المكتبة؟')) {
+            state.library = state.library.filter(x => x.id !== q.id);
+            saveLibrary(); 
+            renderLibrary(filter);
+        }
+    };
+    list.appendChild(card);
+  });
+}
+
+// تهيئة التطبيق وربط جميع الأزرار
+document.addEventListener('DOMContentLoaded', () => {
+  loadApiKey();
+  loadLibrary();
+
+  document.getElementById('pickPdfBtn').onclick = () => document.getElementById('pdfInput').click();
+  document.getElementById('pdfInput').onchange = async (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    state.pdfFile = file;
+    state.pdfName = document.getElementById('bookName').value || file.name.replace(/\.[^/.]+$/, "");
+    setStatus(`تم اختيار: ${file.name} (جاري المعالجة...)`);
+    document.getElementById('pickPdfBtn').textContent = '📕 ' + file.name;
+    
+    try {
+      const {text, totalPages} = await extractPdfText(file);
+      state.pdfText = cleanPdfText(text);
+      setStatus(`تمت قراءة ${totalPages} صفحة بنجاح ✨`, 'ok');
+      toast('✅ الملف جاهز للاستخراج');
+    } catch(err) {
+      setStatus('فشل قراءة الملف', 'err');
+      toast('❌ ' + err.message);
+    }
+  };
+
+  document.getElementById('countBtn').onclick = () => {
+    const counts = [3, 5, 10, 15];
+    let idx = counts.indexOf(state.quoteCount);
+    state.quoteCount = counts[(idx + 1) % counts.length];
+    document.getElementById('countBtn').textContent = '🔢 ' + state.quoteCount;
+  };
+
+  document.getElementById('styleBtn').onclick = () => {
+    let idx = STYLE_ORDER.indexOf(state.imageStyle);
+    state.imageStyle = STYLE_ORDER[(idx + 1) % STYLE_ORDER.length];
+    document.getElementById('styleBtn').textContent = '🎨 ' + STYLE_NAMES[state.imageStyle].split(' ').slice(1).join(' ');
+    saveStyle(state.imageStyle);
+  };
+
+  document.getElementById('libBtn').onclick = openLibrary;
+  document.getElementById('filterAll').onclick = () => renderLibrary('all');
+  document.getElementById('filterFav').onclick = () => renderLibrary('fav');
+
+  document.getElementById('genBtn').onclick = async () => {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    if(!apiKey) { toast('⚠️ أدخل مفتاح OpenRouter أولاً'); return; }
+    if(!state.pdfText) { toast('⚠️ يرجى اختيار ملف PDF أولاً لقرائته'); return; }
+
+    saveApiKey(apiKey);
+    state.authorName = document.getElementById('authorName').value.trim();
+    saveAuthor(state.authorName);
+
+    const btn = document.getElementById('genBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ جاري الاستخراج بالذكاء الاصطناعي...';
+    setStatus('يتم الآن استخراج الاقتباسات (قد يستغرق بعض الوقت)...');
+
+    try {
+      const res = await callOpenRouter(apiKey, state.pdfName, state.pdfText, state.quoteCount);
+      const quotes = parseQuotes(res.text);
+      state.quotes = quotes;
+      renderExtractedQuotes();
+      setStatus('✅ تم استخراج الاقتباسات بنجاح', 'ok');
+      toast('✨ اكتمل الاستخراج!');
+    } catch(e) {
+      setStatus('❌ فشل الاستخراج', 'err');
+      toast(e.message, 5000);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'استخراج ✨';
+    }
+  };
+
+  function renderExtractedQuotes() {
+    const container = document.getElementById('quotes');
+    container.innerHTML = '';
+    state.quotes.forEach((text, i) => {
+      ensureInLibrary(text, state.pdfName); 
+      
+      const qDiv = document.createElement('div');
+      qDiv.className = 'card';
+      qDiv.innerHTML = `
+        <div class="card-head">
+          <span class="q-num">اقتباس #${i+1}</span>
+          <button class="btn btn-blue action-design" style="font-size:11px; padding:6px 10px;">🎨 تصميم الصورة</button>
+        </div>
+        <div class="q-text">${escapeHtml(text)}</div>
+      `;
+      qDiv.querySelector('.action-design').onclick = () => showQuoteImage(text);
+      container.appendChild(qDiv);
+    });
+  }
+
+  document.getElementById('editQuoteBtn').onclick = enterEditMode;
+  document.getElementById('regenBtn').onclick = regenerateCurrent;
+
+  document.getElementById('toggleQuoteBtn').onclick = () => { state.showQuote = !state.showQuote; updateToggleUI(); };
+  document.getElementById('toggleBookBtn').onclick = () => { state.showBook = !state.showBook; updateToggleUI(); };
+  document.getElementById('toggleAuthorBtn').onclick = () => { state.showAuthor = !state.showAuthor; updateToggleUI(); };
+  document.getElementById('toggleWatermarkBtn').onclick = () => { state.showWatermark = !state.showWatermark; saveWatermark(state.showWatermark); updateToggleUI(); };
+
+  document.getElementById('durationBtn').onclick = () => {
+     let idx = DURATION_OPTIONS.indexOf(state.videoDuration);
+     state.videoDuration = DURATION_OPTIONS[(idx+1)%DURATION_OPTIONS.length];
+     saveDuration(state.videoDuration);
+     updateDurationButton();
+  };
+  
+  document.getElementById('animationBtn').onclick = () => {
+     let idx = ANIMATION_OPTIONS.indexOf(state.animationType);
+     state.animationType = ANIMATION_OPTIONS[(idx+1)%ANIMATION_OPTIONS.length];
+     saveAnimation(state.animationType);
+     updateAnimationButton();
+  };
+  
+  document.getElementById('videoBtn').onclick = handleVideoGeneration;
+  document.getElementById('saveBothBtn').onclick = saveBothOrientations;
+
+  document.getElementById('orientPortrait').onclick = () => { state.orientation = 'portrait'; saveOrientation('portrait'); updateOrientationUI(); regenerateCurrentIfPreview(); };
+  document.getElementById('orientLandscape').onclick = () => { state.orientation = 'landscape'; saveOrientation('landscape'); updateOrientationUI(); regenerateCurrentIfPreview(); };
+
+  function regenerateCurrentIfPreview() {
+    if(!document.getElementById('imgPreview').classList.contains('hidden') && !state.editMode) {
+        showQuoteImage(state.currentImageText, state.imageStyle);
+    }
+  }
+
+  document.getElementById('customBgBtn').onclick = () => document.getElementById('bgInput').click();
+  document.getElementById('bgInput').onchange = async (e) => {
+     const file = e.target.files[0];
+     if(!file) return;
+     try {
+        const b64 = await processImageFile(file);
+        state.customBg = b64;
+        saveCustomBg(b64);
+        updateBgUI();
+        regenerateCurrentIfPreview();
+     } catch(err) { toast(err.message); }
+  };
+  
+  document.getElementById('clearBgBtn').onclick = () => {
+     state.customBg = null;
+     saveCustomBg(null);
+     updateBgUI();
+     regenerateCurrentIfPreview();
+  };
+
+  document.querySelectorAll('.style-chip').forEach(chip => {
+    chip.onclick = () => {
+       const st = chip.dataset.style;
+       state.imageStyle = st;
+       saveStyle(st);
+       document.querySelectorAll('.style-chip').forEach(c => c.classList.remove('active'));
+       chip.classList.add('active');
+       regenerateCurrentIfPreview();
+    };
+  });
+});
+</script>
+</body>
+</html>
