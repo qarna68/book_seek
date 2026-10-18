@@ -340,7 +340,8 @@ async function extractPdfText(file){
   const arrayBuffer=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
   const totalPages=pdf.numPages;
-  const MAX=10; 
+  // تقليل عدد الصفحات المسحوبة لتجنب رفض الفايروول للحجم الكبير
+  const MAX=5; 
   let start=1;
   if(totalPages>MAX)start=Math.floor(Math.random()*(totalPages-MAX))+1;
   const end=Math.min(start+MAX-1,totalPages);
@@ -396,12 +397,6 @@ function parseQuotes(text){
   return quotes.length?quotes:[text];
 }
 
-function truncateAtLine(text,maxChars){
-  if(text.length<=maxChars)return text;
-  const cut=text.lastIndexOf('\n',maxChars);
-  return text.substring(0,cut>0?cut:maxChars);
-}
-
 function prepareQuoteText(text){
   let t=String(text||'');
   t=t.replace(/\s*\[صفحة\s*\d+\]\s*/g,' ');
@@ -412,46 +407,53 @@ function prepareQuoteText(text){
   return t;
 }
 
-// دالة الاتصال المزدوجة (تدعم Groq و OpenRouter تلقائياً)
+// دالة الذكاء الاصطناعي مع حل مشكلة 405 بشكل جذري
 async function callAI(apiKey,bookName,bookText,count){
   const seed=Math.floor(Math.random()*9000)+1000;
+  
+  // بتر النص ليصبح بحد أقصى 12000 حرف لتجنب رفض الفايروول للحجم الضخم (Payload Too Large)
+  let safeText = bookText;
+  if(safeText.length > 12000) {
+      safeText = safeText.substring(0, 12000) + '... (تم الاكتفاء بهذا القدر لتخفيف الضغط)';
+  }
+
   const prompt=`أنت مساعد متخصص في استخراج الاقتباسات الفكرية من الكتب العربية.
 تعليمات مهمة جداً:
-- النص المرفق قد يحتوي على رموز غريبة أو أحرف صينية أو unk — تجاهلها.
-- اكتب بالعربية الفصحى فقط.
+- تجاهل الرموز الغريبة.
+- اكتب بالعربية الفصحى.
 
 اسم الكتاب: ${bookName||'غير مذكور'}
 رمز التنويع: ${seed}
 
-⚠️ الأهم في هذه المهمة: أن يكون كل اقتباس **فقرة كاملة** تنقل فكرة متكاملة للقارئ.
-
 الشروط:
-1. كل اقتباس يجب أن يتكون من **3 إلى 5 جمل مترابطة** (40-90 كلمة).
-2. الاقتباس يجب أن ينقل **فكرة كاملة** يفهمها القارئ بدون الرجوع للكتاب.
-3. اختر مقاطع تبدأ بجملة تمهيدية وتنتهي بخاتمة أو نتيجة.
-4. ركّز على الأفكار القوية: النفسية، الفلسفية، الاجتماعية، التطويرية.
-5. عربي فقط، طابق النص حرفياً بدون اختلاق.
-
-المطلوب: استخرج ${count} اقتباسات فكرية طويلة من النص المرفق.
-
-تعليمات الإخراج:
-- ابدأ القائمة مباشرة.
-- رقّم من 1 إلى ${count}.
-- ضع سطراً فارغاً بين كل اقتباسين.
-- لا تكتب أي شيء آخر غير الاقتباسات.
+1. كل اقتباس يجب أن يتكون من 3 إلى 5 جمل مترابطة (40-90 كلمة).
+2. الاقتباس ينقل فكرة كاملة ومفهومة.
+3. استخرج ${count} اقتباسات.
+4. رقّم من 1 إلى ${count}، ولا تكتب أي نص إضافي أبداً.
 
 نص الكتاب:
-${bookText}`;
+${safeText}`;
 
-  let endpoint, models;
+  let endpoint, models, reqHeaders;
+  const isGroq = apiKey.trim().startsWith('gsk_');
   
-  // التعرف على نوع المفتاح المدخل وتحديد النماذج المناسبة
-  if (apiKey.trim().startsWith('gsk_')) {
+  if (isGroq) {
      endpoint = '[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)';
      models = ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'];
+     // ترويسات نقية تماماً لـ Groq لتفادي خطأ 405 من CORS
+     reqHeaders = {
+        'Authorization': 'Bearer ' + apiKey.trim(),
+        'Content-Type': 'application/json'
+     };
   } else {
      endpoint = '[https://openrouter.ai/api/v1/chat/completions](https://openrouter.ai/api/v1/chat/completions)';
      models = ['google/gemini-2.0-flash-exp:free', 'meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.5-flash'];
+     reqHeaders = {
+        'Authorization': 'Bearer ' + apiKey.trim(),
+        'Content-Type': 'application/json',
+        'HTTP-Referer': window.location.href,
+        'X-Title': 'Arabic Quotes Extractor'
+     };
   }
 
   const errors=[];
@@ -460,15 +462,12 @@ ${bookText}`;
     try{
       const res=await fetch(endpoint,{
         method:'POST',
-        headers:{
-          'Authorization':'Bearer '+apiKey.trim(),
-          'Content-Type':'application/json'
-        },
+        headers: reqHeaders,
         body:JSON.stringify({
           model: model,
           messages:[{role:'user',content:prompt}],
           temperature:0.7,
-          max_tokens:2000
+          max_tokens:1500
         })
       });
       if(res.status===200){
