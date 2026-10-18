@@ -91,7 +91,7 @@ h1{font-size:18px;text-align:center;margin-bottom:16px;font-weight:700}
 
 <div id="main">
   <h1>✨ استخراج اقتباسات ذكي</h1>
-  <input id="apiKey" class="field" type="password" placeholder="مفتاح OpenRouter (sk-or-v1-...)">
+  <input id="apiKey" class="field" type="password" placeholder="مفتاح Groq (gsk_...) أو OpenRouter">
   <input id="bookName" class="field" type="text" placeholder="اسم الكتاب (اختياري)">
   <input id="authorName" class="field" type="text" placeholder="اسم المؤلف (اختياري)">
   <button id="pickPdfBtn" class="btn btn-dark" style="width:100%;margin-bottom:10px;">📕 اختيار ملف PDF</button>
@@ -340,7 +340,7 @@ async function extractPdfText(file){
   const arrayBuffer=await file.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
   const totalPages=pdf.numPages;
-  const MAX=15; // تم تقليل عدد الصفحات لتفادي حظر السيرفر بسبب حجم النص
+  const MAX=10; 
   let start=1;
   if(totalPages>MAX)start=Math.floor(Math.random()*(totalPages-MAX))+1;
   const end=Math.min(start+MAX-1,totalPages);
@@ -412,17 +412,10 @@ function prepareQuoteText(text){
   return t;
 }
 
-// استخدام نماذج مجانية ومستقرة لتفادي أي مشاكل في الرصيد أو التوجيه
-const MODELS=[
-  'google/gemini-2.0-flash-exp:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
-  'google/gemini-2.5-flash'
-];
-
-async function callOpenRouter(apiKey,bookName,bookText,count){
+// دالة الاتصال المزدوجة (تدعم Groq و OpenRouter تلقائياً)
+async function callAI(apiKey,bookName,bookText,count){
   const seed=Math.floor(Math.random()*9000)+1000;
   const prompt=`أنت مساعد متخصص في استخراج الاقتباسات الفكرية من الكتب العربية.
-
 تعليمات مهمة جداً:
 - النص المرفق قد يحتوي على رموز غريبة أو أحرف صينية أو unk — تجاهلها.
 - اكتب بالعربية الفصحى فقط.
@@ -449,23 +442,33 @@ async function callOpenRouter(apiKey,bookName,bookText,count){
 
 نص الكتاب:
 ${bookText}`;
+
+  let endpoint, models;
+  
+  // التعرف على نوع المفتاح المدخل وتحديد النماذج المناسبة
+  if (apiKey.trim().startsWith('gsk_')) {
+     endpoint = '[https://api.groq.com/openai/v1/chat/completions](https://api.groq.com/openai/v1/chat/completions)';
+     models = ['llama-3.3-70b-versatile', 'mixtral-8x7b-32768'];
+  } else {
+     endpoint = '[https://openrouter.ai/api/v1/chat/completions](https://openrouter.ai/api/v1/chat/completions)';
+     models = ['google/gemini-2.0-flash-exp:free', 'meta-llama/llama-3.3-70b-instruct:free', 'google/gemini-2.5-flash'];
+  }
+
   const errors=[];
-  for(const model of MODELS){
+  for(const model of models){
     setStatus(`(${model.split('/').pop()}) جاري الاتصال...`);
     try{
-      const res=await fetch('[https://openrouter.ai/api/v1/chat/completions](https://openrouter.ai/api/v1/chat/completions)',{
+      const res=await fetch(endpoint,{
         method:'POST',
         headers:{
-          'Authorization':'Bearer '+apiKey,
-          'Content-Type':'application/json',
-          'HTTP-Referer': window.location.href || '[https://qarna68.github.io/](https://qarna68.github.io/)',
-          'X-Title': 'Arabic Quotes Extractor'
+          'Authorization':'Bearer '+apiKey.trim(),
+          'Content-Type':'application/json'
         },
         body:JSON.stringify({
           model: model,
           messages:[{role:'user',content:prompt}],
           temperature:0.7,
-          max_tokens:2500
+          max_tokens:2000
         })
       });
       if(res.status===200){
@@ -1584,7 +1587,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('genBtn').onclick = async () => {
     const apiKey = document.getElementById('apiKey').value.trim();
-    if(!apiKey) { toast('⚠️ أدخل مفتاح OpenRouter أولاً'); return; }
+    if(!apiKey) { toast('⚠️ أدخل مفتاح OpenRouter أو Groq أولاً'); return; }
     if(!state.pdfText) { toast('⚠️ يرجى اختيار ملف PDF أولاً لقرائته'); return; }
 
     saveApiKey(apiKey);
@@ -1597,7 +1600,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setStatus('يتم الآن استخراج الاقتباسات (قد يستغرق بعض الوقت)...');
 
     try {
-      const res = await callOpenRouter(apiKey, state.pdfName, state.pdfText, state.quoteCount);
+      const res = await callAI(apiKey, state.pdfName, state.pdfText, state.quoteCount);
       const quotes = parseQuotes(res.text);
       state.quotes = quotes;
       renderExtractedQuotes();
